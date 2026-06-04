@@ -4,10 +4,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * A JSON schema describing the shape of a test data type. Entry point for the declarative path:
@@ -19,20 +21,22 @@ public final class Schema {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String EXTENDS = "$extends";
 
-    private final List<String> properties;
+    private final Map<String, String> types;
+    private final Set<String> required;
     private final Map<String, JsonNode> definitions = new HashMap<>();
 
-    private Schema(List<String> properties) {
-        this.properties = properties;
+    private Schema(Map<String, String> types, Set<String> required) {
+        this.types = types;
+        this.required = required;
     }
 
     public static Schema parse(String schema) {
         JsonNode root = read(schema);
-        List<String> properties = new ArrayList<>();
+        Map<String, String> types = new LinkedHashMap<>();
         for (Map.Entry<String, JsonNode> property : root.get("properties").properties()) {
-            properties.add(property.getKey());
+            types.put(property.getKey(), property.getValue().get("type").asText());
         }
-        return new Schema(properties);
+        return new Schema(types, requiredFields(root));
     }
 
     public void define(String name, String definition) {
@@ -65,8 +69,25 @@ public final class Schema {
         }
     }
 
-    List<String> properties() {
-        return properties;
+    Collection<String> properties() {
+        return types.keySet();
+    }
+
+    String type(String property) {
+        return types.get(property);
+    }
+
+    boolean isRequired(String property) {
+        return required.contains(property);
+    }
+
+    private static Set<String> requiredFields(JsonNode root) {
+        Set<String> required = new HashSet<>();
+        JsonNode node = root.get("required");
+        if (node != null) {
+            node.forEach(field -> required.add(field.asText()));
+        }
+        return required;
     }
 
     private static JsonNode read(String json) {

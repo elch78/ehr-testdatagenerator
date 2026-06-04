@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * A declarative mother: resolved values for a schema type, from which test data is generated.
+ * Mandatory fields the mother leaves unset are filled with random values.
  */
 public final class Mother {
 
@@ -24,8 +26,18 @@ public final class Mother {
     public String generate() {
         ObjectNode testData = MAPPER.createObjectNode();
         for (String property : schema.properties()) {
-            testData.set(property, values.get(property));
+            valueFor(property).ifPresent(value -> testData.set(property, value));
         }
         return Json.toJson(testData);
+    }
+
+    private Optional<JsonNode> valueFor(String property) {
+        if (values.containsKey(property)) {
+            return Optional.of(values.get(property));
+        }
+        if (schema.isRequired(property)) {
+            return Optional.of(RandomValue.forType(schema.type(property)));
+        }
+        return Optional.empty();
     }
 }
