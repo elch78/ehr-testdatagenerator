@@ -3,6 +3,7 @@ package be.elchworks.testdatagenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -20,7 +21,8 @@ import java.util.Set;
  */
 public final class Schema {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper JSON = new ObjectMapper();
+    private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
     private static final String EXTENDS = "$extends";
 
     private final Map<String, String> types;
@@ -33,7 +35,7 @@ public final class Schema {
     }
 
     public static Schema parse(String schema) {
-        JsonNode root = read(schema);
+        JsonNode root = parse(JSON, schema);
         Map<String, String> types = new LinkedHashMap<>();
         for (Map.Entry<String, JsonNode> property : root.get("properties").properties()) {
             types.put(property.getKey(), property.getValue().get("type").asText());
@@ -42,7 +44,11 @@ public final class Schema {
     }
 
     public void define(String name, String definition) {
-        definitions.put(name, read(definition));
+        definitions.put(name, parse(JSON, definition));
+    }
+
+    public void defineYaml(String name, String definition) {
+        definitions.put(name, parse(YAML, definition));
     }
 
     public Mother mother(String name) {
@@ -60,7 +66,7 @@ public final class Schema {
     }
 
     public Validation validateData(String testData) {
-        JsonNode data = read(testData);
+        JsonNode data = parse(JSON, testData);
         List<String> problems = new ArrayList<>();
         for (Map.Entry<String, JsonNode> field : data.properties()) {
             if (!isKnown(field.getKey())) {
@@ -122,11 +128,11 @@ public final class Schema {
         return required;
     }
 
-    private static JsonNode read(String json) {
+    private static JsonNode parse(ObjectMapper format, String text) {
         try {
-            return MAPPER.readTree(json);
+            return format.readTree(text);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Invalid JSON", e);
+            throw new IllegalArgumentException("Cannot parse definition", e);
         }
     }
 }
