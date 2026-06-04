@@ -52,8 +52,24 @@ public final class Schema {
     public Validation validate(String name) {
         List<String> problems = new ArrayList<>();
         for (String property : resolve(name).keySet()) {
-            if (!types.containsKey(property)) {
+            if (!isKnown(property)) {
                 problems.add("Mother '" + name + "' sets unknown property '" + property + "'");
+            }
+        }
+        return new Validation(problems);
+    }
+
+    public Validation validateData(String testData) {
+        JsonNode data = read(testData);
+        List<String> problems = new ArrayList<>();
+        for (Map.Entry<String, JsonNode> field : data.properties()) {
+            if (!isKnown(field.getKey())) {
+                problems.add("Test data sets unknown property '" + field.getKey() + "'");
+            }
+        }
+        for (String property : required) {
+            if (!data.has(property)) {
+                problems.add("Test data is missing required property '" + property + "'");
             }
         }
         return new Validation(problems);
@@ -91,6 +107,10 @@ public final class Schema {
 
     boolean isRequired(String property) {
         return required.contains(property);
+    }
+
+    private boolean isKnown(String property) {
+        return types.containsKey(property);
     }
 
     private static Set<String> requiredFields(JsonNode root) {
