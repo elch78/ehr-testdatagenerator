@@ -4,10 +4,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -45,6 +47,16 @@ public final class Schema {
 
     public Mother mother(String name) {
         return new Mother(this, resolve(name));
+    }
+
+    public Validation validate(String name) {
+        List<String> problems = new ArrayList<>();
+        for (String property : resolve(name).keySet()) {
+            if (!types.containsKey(property)) {
+                problems.add("Mother '" + name + "' sets unknown property '" + property + "'");
+            }
+        }
+        return new Validation(problems);
     }
 
     private Map<String, JsonNode> resolve(String name) {
