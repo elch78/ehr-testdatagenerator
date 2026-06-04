@@ -1,6 +1,7 @@
 # Direction: core model + adapters
 
-Status: **direction agreed (brainstorm, 2026-06-04)** — not yet implemented.
+Status: **in progress (2026-06-04)** — the declarative core, both input formats, validation and
+migration are implemented; Java export and delivery remain. See the slice checklist below.
 
 ## Goal
 
@@ -63,27 +64,16 @@ Everything hangs off one core model; inputs and outputs are adapters around it.
 
 ## ATDD slice order (thin vertical slices; build the model first, CLI/service last)
 
-1. Declarative mother → test data (declarative twin of today's builder test) — **start here**.
-2. Mother inheritance (`aFoodProduct` builds on `aProduct`).
-3. Mandatory fields randomized when not set.
-4. Mother validation against schema (foundation for migration).
-5. Data validation against schema.
-6. Second format (YAML) over the same core — proves adapter separation.
-7. Java export of a mother — proves the "two equal ways".
-8. Migration = slices 4 + 5 against a changed schema, with a diff report.
-9. Delivery (CLI/service) as a thin shell.
+1. ✅ Declarative mother → test data — `GenerateTestDataFromMotherTest`.
+2. ✅ Mother inheritance via `$extends` — `MotherInheritanceTest`.
+3. ✅ Mandatory fields randomized when not set — `RandomizeMandatoryFieldsTest`.
+4. ✅ Mother validation against schema — `ValidateMotherTest`.
+5. ✅ Data validation against schema — `ValidateTestDataTest`.
+6. ✅ Second format (YAML) over the same core — `DefineMotherInYamlTest`.
+7. ⬜ Java export of a mother — proves the "two equal ways". Deferred; open question is
+   source-text generation vs. compile-and-run equivalence.
+8. ✅ Migration = slices 4 + 5 against a changed schema — `MigrationTest`.
+9. ⬜ Delivery (CLI/service) as a thin shell. Needs the CLI-vs-service decision.
 
-## Proposed first acceptance test (awaiting RED implementation)
-
-> **Intent:** As a user I want to define a mother declaratively (against a JSON schema) and
-> generate test data from it, so I can assemble test data without writing Java.
->
-> **Scenario:**
-> - **Given** a schema for `Person` (`name: string`, `age: integer`)
-> - **And** a declarative mother `alice` setting `name = "Alice"` and `age = 30`
-> - **When** I generate test data from mother `alice`
-> - **Then** the result is `{ "name": "Alice", "age": 30 }`
-
-Deliberately small: no inheritance, no randomization, no format choice (JSON input for the
-start, which is already parsed). Introduces just one new concept — the declarative mother as
-input and "test data" as output — establishing the core model.
+Possible follow-up to 4/5: **type** validation (a field's value type does not match the schema
+type), which existence-only validation does not yet catch.

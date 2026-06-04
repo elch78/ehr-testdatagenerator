@@ -6,8 +6,11 @@ specific to **testdatagenerator**.
 
 ## What this project is
 
-A Java library that produces JSON test data using the **builder + object-mother** pattern, and can
-**generate** those builders from a JSON schema. See `README.md` for the user-facing overview.
+A Java library that produces JSON test data using the **builder + object-mother** pattern. It offers
+two equal paths over one core model (a schema plus named mothers): a **declarative path** (define
+mothers in JSON/YAML against a JSON schema, then generate, validate, and migrate test data) and a
+**Java code-generation path** (generate Java builders from a schema). See `README.md` for the
+user-facing overview.
 
 ## Build & test
 
@@ -53,22 +56,40 @@ Acceptance tests are behaviour-focused — no implementation details in the scen
 
 Production code in `src/main/java/be/elchworks/testdatagenerator`:
 
+Declarative path:
+
+| Class | Responsibility |
+|-------|----------------|
+| `Schema` | Declarative entry point: parse a schema, register named mothers (JSON/YAML), `validate`/`validateData`. |
+| `Mother` | A resolved mother; `generate()` produces test data, randomizing unset mandatory fields. |
+| `RandomValue` | Type-correct random values for unset mandatory fields. |
+| `Validation` | Reusable check outcome: the problems found, or none when valid. |
+| `Migration` | Aggregate mother/data mismatches against a changed schema into one report. |
+
+Java code-generation path:
+
 | Class | Responsibility |
 |-------|----------------|
 | `Json` | Serialize any object to JSON (Jackson). |
-| `Generator` | Public entry point: `from(schema).compile()`. |
+| `Generator` | Entry point: `from(schema).compile()`. |
 | `JavaSource` | JSON schema → Java record source code. |
 | `InMemoryCompiler` | Compile source to a loaded class without touching disk. |
 | `GeneratedType` | Wrap the compiled type; expose a dynamic `builder().set(...).build()`. |
 
+Internally both paths hold schema and mother definitions as Jackson `JsonNode`, so JSON and YAML are
+interchangeable input formats.
+
 `Person`, `TestFixtures` live in `src/test` — they simulate how a library *user* defines their own
 domain plus mother methods.
 
-Visibility: private by default; only the public API (`Json`, `Generator`, `GeneratedType`) is public.
+Visibility: private by default; only the public API (`Schema`, `Mother`, `Validation`, `Migration`,
+`Json`, `Generator`, `GeneratedType`) is public.
 
 ## Known gaps / direction
 
-- Schema support is `object` + scalar `string`/`integer` only.
-- Generated builders are **dynamic** (`set("name", value)`); typed methods (`.name(...)`) and a
-  generated mother are the path toward the project's actual goal.
-- No build-time plugin; generation is in-memory at runtime.
+- Schema support is `object` + scalar `string`/`integer` only; no nested objects or arrays.
+- Validation/migration check property **existence** (unknown properties, missing mandatory fields),
+  not yet **type** mismatches.
+- The Java path does not yet emit a mother, and its builders are **dynamic** (`set("name", value)`)
+  rather than typed (`.name(...)`).
+- No build-time plugin and no CLI/service yet; everything runs in memory at runtime.
