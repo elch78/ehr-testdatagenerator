@@ -22,10 +22,13 @@ This library keeps that ergonomics and adds two things:
 
 Early, test-driven. Two capabilities exist end-to-end today:
 
-| Capability | Entry point | Feature spec |
-|------------|-------------|--------------|
-| Build a domain object and serialize it to JSON | `Json.toJson(object)` | [`features/build-object-as-json.feature`](features/build-object-as-json.feature) |
-| Generate a working builder from a JSON schema | `Generator.from(schema).compile()` | [`features/generate-builder-from-schema.feature`](features/generate-builder-from-schema.feature) |
+| Capability | Entry point | Acceptance test |
+|------------|-------------|-----------------|
+| Build a domain object and serialize it to JSON | `Json.toJson(object)` | `BuildObjectAsJsonTest` |
+| Generate a working builder from a JSON schema | `Generator.from(schema).compile()` | `GenerateBuilderFromSchemaTest` |
+
+Each capability's living specification is its acceptance test: the test class Javadoc states the
+intent, and the test body is the executable scenario. There are no separate `.feature` files.
 
 ## Usage
 
@@ -93,8 +96,8 @@ string assembly painful.
 
 ## Development
 
-The project is fully test-driven (ATDD: a feature spec and a failing acceptance test precede any
-implementation). Build and test with the Maven wrapper:
+The project is fully test-driven (ATDD: a failing acceptance test precedes any implementation; the
+test is the living specification). Build and test with the Maven wrapper:
 
 ```bash
 ./mvnw test
