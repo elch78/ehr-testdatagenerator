@@ -30,8 +30,9 @@ class GenerateTestDataFromMotherTest {
                 """;
 
         // when test data is generated from the mother
-        Mother mother = Schema.parse(schema).mother(alice);
-        String testData = mother.generate();
+        Schema person = Schema.parse(schema);
+        person.define("alice", alice);
+        String testData = person.mother("alice").generate();
 
         // then the generated data matches the mother's values
         assertThatJson(testData).isEqualTo("""
