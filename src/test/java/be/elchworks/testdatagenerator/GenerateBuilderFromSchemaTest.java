@@ -1,5 +1,7 @@
 package be.elchworks.testdatagenerator;
 
+import be.elchworks.testdatagenerator.codegen.GeneratedType;
+import be.elchworks.testdatagenerator.codegen.Generator;
 import org.junit.jupiter.api.Test;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;

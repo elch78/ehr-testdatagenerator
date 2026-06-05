@@ -1,4 +1,4 @@
-package be.elchworks.testdatagenerator;
+package be.elchworks.testdatagenerator.declarative;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.IntNode;

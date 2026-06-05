@@ -1,4 +1,4 @@
-package be.elchworks.testdatagenerator;
+package be.elchworks.testdatagenerator.codegen;
 
 /**
  * Turns a JSON schema into a compiled, ready-to-use {@link GeneratedType}.

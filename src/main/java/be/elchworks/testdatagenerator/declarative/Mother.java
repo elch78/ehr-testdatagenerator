@@ -1,5 +1,6 @@
-package be.elchworks.testdatagenerator;
+package be.elchworks.testdatagenerator.declarative;
 
+import be.elchworks.testdatagenerator.Json;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;

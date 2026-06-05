@@ -1,4 +1,4 @@
-package be.elchworks.testdatagenerator;
+package be.elchworks.testdatagenerator.codegen;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.RecordComponent;

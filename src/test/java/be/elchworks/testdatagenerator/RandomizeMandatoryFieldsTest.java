@@ -1,5 +1,6 @@
 package be.elchworks.testdatagenerator;
 
+import be.elchworks.testdatagenerator.declarative.Schema;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

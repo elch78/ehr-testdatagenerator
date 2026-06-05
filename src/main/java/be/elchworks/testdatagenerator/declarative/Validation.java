@@ -1,4 +1,4 @@
-package be.elchworks.testdatagenerator;
+package be.elchworks.testdatagenerator.declarative;
 
 import java.util.List;
 

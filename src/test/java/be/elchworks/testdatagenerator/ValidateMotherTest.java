@@ -1,5 +1,7 @@
 package be.elchworks.testdatagenerator;
 
+import be.elchworks.testdatagenerator.declarative.Schema;
+import be.elchworks.testdatagenerator.declarative.Validation;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

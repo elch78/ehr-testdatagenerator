@@ -1,4 +1,4 @@
-package be.elchworks.testdatagenerator;
+package be.elchworks.testdatagenerator.codegen;
 
 import javax.tools.DiagnosticCollector;
 import javax.tools.FileObject;

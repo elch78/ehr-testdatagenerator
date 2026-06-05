@@ -1,5 +1,6 @@
 package be.elchworks.testdatagenerator;
 
+import be.elchworks.testdatagenerator.declarative.Schema;
 import org.junit.jupiter.api.Test;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
