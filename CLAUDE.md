@@ -77,6 +77,12 @@ Java code-generation path:
 | `InMemoryCompiler` | Compile source to a loaded class without touching disk. |
 | `GeneratedType` | Wrap the compiled type; expose a dynamic `builder().set(...).build()`. |
 
+Delivery shell:
+
+| Class | Responsibility |
+|-------|----------------|
+| `Cli` | `run(args)` reads `--schema`/`--mothers`/`--datasets` files (JSON or YAML), wires `Schema`, and returns the generated datasets JSON. Thin adapter; no executable `main` yet. |
+
 Internally both paths hold schema and mother definitions as Jackson `JsonNode`, so JSON and YAML are
 interchangeable input formats.
 
@@ -84,7 +90,7 @@ interchangeable input formats.
 domain plus mother methods.
 
 Visibility: private by default; only the public API (`Schema`, `Mother`, `Validation`, `Migration`,
-`Json`, `Generator`, `GeneratedType`) is public.
+`Json`, `Generator`, `GeneratedType`, `Cli`) is public.
 
 ## Known gaps / direction
 
@@ -95,4 +101,5 @@ Visibility: private by default; only the public API (`Schema`, `Mother`, `Valida
   not yet **type** mismatches.
 - The Java path does not yet emit a mother, and its builders are **dynamic** (`set("name", value)`)
   rather than typed (`.name(...)`).
-- No build-time plugin and no CLI/service yet; everything runs in memory at runtime.
+- The CLI exists as a library seam (`Cli.run(args)`) but has no executable `main`/packaging yet, and
+  no build-time plugin or web service; everything runs in memory at runtime.

@@ -1,9 +1,8 @@
 # Direction: core model + adapters
 
-Status: **in progress (2026-06-06)** — the declarative core, both input formats, validation and
-migration are implemented. Scoping delivery surfaced a third core input — **Datasets** (which
-datasets to generate) — so modelling them and schema nesting now precede the CLI shell. See the
-slice checklist below.
+Status: **in progress (2026-06-06)** — the declarative core (incl. the **Datasets** input, nested
+objects and mother composition), both input formats, validation, migration and the **CLI** shell are
+implemented. Java export (slice 7) is the main remaining slice. See the slice checklist below.
 
 ## Goal
 
@@ -95,8 +94,10 @@ That is core-model work and comes before the delivery shell:
 11. ✅ **Nested mother invocations** — a field may reference another mother via `$mother`, resolved
     as a base with sibling overrides; the same machinery as a dataset invocation, one level deeper,
     so datasets compose as a tree — `ComposeMothersTest`.
-12. ⬜ Delivery (CLI) as a thin shell that takes the three inputs (schema, mothers, datasets) and
-    renders the datasets. Decision: **CLI** (in-process testable thin shell), not a web service.
+12. ✅ Delivery (CLI) as a thin shell that takes the three inputs (schema, mothers, datasets) and
+    renders the datasets — `GenerateDatasetsFromCliTest`. Decision: **CLI** (in-process testable thin
+    shell), not a web service. `Cli.run(args)` is the seam; an executable `main`/packaging is still
+    open.
 
 Possible follow-up to 4/5: **type** validation (a field's value type does not match the schema
 type), which existence-only validation does not yet catch.
