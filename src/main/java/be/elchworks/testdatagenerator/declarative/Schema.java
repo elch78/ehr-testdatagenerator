@@ -3,15 +3,16 @@ package be.elchworks.testdatagenerator.declarative;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -25,11 +26,13 @@ public final class Schema {
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
     private static final String EXTENDS = "$extends";
 
+    private final JsonNode root;
     private final Map<String, String> types;
     private final Set<String> required;
     private final Map<String, JsonNode> definitions = new HashMap<>();
 
-    private Schema(Map<String, String> types, Set<String> required) {
+    private Schema(JsonNode root, Map<String, String> types, Set<String> required) {
+        this.root = root;
         this.types = types;
         this.required = required;
     }
@@ -40,7 +43,7 @@ public final class Schema {
         for (Map.Entry<String, JsonNode> property : root.get("properties").properties()) {
             types.put(property.getKey(), property.getValue().get("type").asText());
         }
-        return new Schema(types, requiredFields(root));
+        return new Schema(root, types, requiredFields(root));
     }
 
     public void define(String name, String definition) {
@@ -53,6 +56,10 @@ public final class Schema {
 
     public Mother mother(String name) {
         return new Mother(this, resolve(name));
+    }
+
+    public Datasets datasets(String datasets) {
+        return new Datasets(this, parse(JSON, datasets));
     }
 
     public Validation validate(String name) {
@@ -81,7 +88,7 @@ public final class Schema {
         return new Validation(problems);
     }
 
-    private Map<String, JsonNode> resolve(String name) {
+    Map<String, JsonNode> resolve(String name) {
         JsonNode definition = definitions.get(name);
         Map<String, JsonNode> values = inheritedValues(definition);
         addOwnValues(definition, values);
@@ -103,16 +110,47 @@ public final class Schema {
         }
     }
 
-    Collection<String> properties() {
-        return types.keySet();
+    JsonNode generateData(Map<String, JsonNode> values) {
+        return generateObject(root, values);
     }
 
-    String type(String property) {
-        return types.get(property);
+    private ObjectNode generateObject(JsonNode objectSchema, Map<String, JsonNode> values) {
+        ObjectNode result = JSON.createObjectNode();
+        Set<String> required = requiredFields(objectSchema);
+        for (Map.Entry<String, JsonNode> property : objectSchema.get("properties").properties()) {
+            String name = property.getKey();
+            valueFor(property.getValue(), required.contains(name), values.get(name))
+                    .ifPresent(value -> result.set(name, value));
+        }
+        return result;
     }
 
-    boolean isRequired(String property) {
-        return required.contains(property);
+    private Optional<JsonNode> valueFor(JsonNode propertySchema, boolean required, JsonNode set) {
+        if (isObject(propertySchema)) {
+            if (set == null && !required) {
+                return Optional.empty();
+            }
+            return Optional.of(generateObject(propertySchema, toValues(set)));
+        }
+        if (set != null) {
+            return Optional.of(set);
+        }
+        if (required) {
+            return Optional.of(RandomValue.forType(propertySchema.get("type").asText()));
+        }
+        return Optional.empty();
+    }
+
+    private static boolean isObject(JsonNode propertySchema) {
+        return "object".equals(propertySchema.get("type").asText());
+    }
+
+    private static Map<String, JsonNode> toValues(JsonNode object) {
+        Map<String, JsonNode> values = new HashMap<>();
+        if (object != null) {
+            object.properties().forEach(field -> values.put(field.getKey(), field.getValue()));
+        }
+        return values;
     }
 
     private boolean isKnown(String property) {

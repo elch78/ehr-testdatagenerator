@@ -1,7 +1,9 @@
 # Direction: core model + adapters
 
-Status: **in progress (2026-06-04)** — the declarative core, both input formats, validation and
-migration are implemented; Java export and delivery remain. See the slice checklist below.
+Status: **in progress (2026-06-06)** — the declarative core, both input formats, validation and
+migration are implemented. Scoping delivery surfaced a third core input — **Datasets** (which
+datasets to generate) — so modelling them and schema nesting now precede the CLI shell. See the
+slice checklist below.
 
 ## Goal
 
@@ -19,13 +21,14 @@ defined) and **migration** (what happens when the schema changes).
 Everything hangs off one core model; inputs and outputs are adapters around it.
 
 ```
-        Inputs (parsers)               CORE MODEL                 Outputs (renderers)
-   ┌──────────────────────┐                                  ┌──────────────────────┐
-   │ JSON Schema           │──┐                            ┌─│ Test data (JSON)      │
-   │ Mother in YAML        │──┼──►  Schema  +  Mother   ───┼─│ Java builders + mother│
-   │ Mother in JSON        │──┤     (types)   (defaults,    │ │ (export)              │
-   │ Mother in Java        │──┘               inheritance,  └─└──────────────────────┘
-   └──────────────────────┘                   random fields)
+        Inputs (parsers)                  CORE MODEL                Outputs (renderers)
+   ┌──────────────────────┐                                     ┌──────────────────────┐
+   │ JSON Schema           │──┐                               ┌─│ Test data (JSON)      │
+   │ Mother in YAML        │──┤                               │ │ Java builders + mother│
+   │ Mother in JSON        │──┼──► Schema + Mother + Datasets ─┼─│ (export)              │
+   │ Mother in Java        │──┤    (types)  (defaults, (which  │ └──────────────────────┘
+   │ Datasets (which data) │──┘            inherit.,  datasets)
+   └──────────────────────┘               random)       │
                                                    │
                                                    ▼
                                               Validators
@@ -42,6 +45,12 @@ Everything hangs off one core model; inputs and outputs are adapters around it.
   to a parent mother (inheritance) + which mandatory fields are randomized. Defined
   **format-independently**: the same concept whether expressed in YAML, JSON, or Java.
   This is the declarative equivalent of `aFoodProduct()` building on `aProduct()`.
+- **Datasets** — *which* datasets the user wants. Not a single mother selection: a **list of
+  mother invocations**, each a mother reference plus optional overrides, where an override is
+  either a scalar **or another (nested) mother invocation**. This is the declarative mirror of
+  composing object mothers in test code —
+  `anOrder().customer(aCustomer().name("Bob")).items(aLineItem().quantity(3), aLineItem())`.
+  `count` is unnecessary: to get three datasets you list three invocations.
 
 ### Key consequences
 
@@ -73,7 +82,20 @@ Everything hangs off one core model; inputs and outputs are adapters around it.
 7. ⬜ Java export of a mother — proves the "two equal ways". Deferred; open question is
    source-text generation vs. compile-and-run equivalence.
 8. ✅ Migration = slices 4 + 5 against a changed schema — `MigrationTest`.
-9. ⬜ Delivery (CLI/service) as a thin shell. Needs the CLI-vs-service decision.
+
+The **Datasets** concept (which datasets to generate) surfaced while scoping delivery: generating
+test data is not "pick one mother", it is composing a list of (possibly nested) mother invocations.
+That is core-model work and comes before the delivery shell:
+
+9. ✅ **Flat datasets** — the wanted datasets are a list of mother invocations, each a mother
+   reference plus scalar overrides, producing several datasets at once — `GenerateDatasetsTest`.
+10. ✅ **Nested objects in the schema** — a property may be an object with its own properties and
+    required fields; generation recurses, filling nested mandatory fields — `NestedObjectSchemaTest`.
+    (Arrays still open.)
+11. ⬜ **Nested mother invocations** — an override may itself be a mother invocation, so datasets
+    are composed as a tree (builds on 9 + 10).
+12. ⬜ Delivery (CLI) as a thin shell that takes the three inputs (schema, mothers, datasets) and
+    renders the datasets. Decision: **CLI** (in-process testable thin shell), not a web service.
 
 Possible follow-up to 4/5: **type** validation (a field's value type does not match the schema
 type), which existence-only validation does not yet catch.

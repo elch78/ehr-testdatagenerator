@@ -62,6 +62,7 @@ Declarative path:
 |-------|----------------|
 | `Schema` | Declarative entry point: parse a schema, register named mothers (JSON/YAML), `validate`/`validateData`. |
 | `Mother` | A resolved mother; `generate()` produces test data, randomizing unset mandatory fields. |
+| `Datasets` | Which datasets to generate: a list of mother invocations (mother reference + overrides); `generate()` yields one dataset per invocation as a JSON array. |
 | `RandomValue` | Type-correct random values for unset mandatory fields. |
 | `Validation` | Reusable check outcome: the problems found, or none when valid. |
 | `Migration` | Aggregate mother/data mismatches against a changed schema into one report. |
@@ -87,7 +88,9 @@ Visibility: private by default; only the public API (`Schema`, `Mother`, `Valida
 
 ## Known gaps / direction
 
-- Schema support is `object` + scalar `string`/`integer` only; no nested objects or arrays.
+- Schema support is `object` (incl. **nested** objects) + scalar `string`/`integer`; **arrays** not
+  yet. Generation recurses into nested objects and randomizes their mandatory fields; validation is
+  still **top-level only** (nested properties are not yet validated).
 - Validation/migration check property **existence** (unknown properties, missing mandatory fields),
   not yet **type** mismatches.
 - The Java path does not yet emit a mother, and its builders are **dynamic** (`set("name", value)`)
