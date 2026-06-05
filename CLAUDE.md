@@ -62,7 +62,7 @@ Declarative path:
 |-------|----------------|
 | `Schema` | Declarative entry point: parse a schema, register named mothers (JSON/YAML), `validate`/`validateData`. |
 | `Mother` | A resolved mother; `generate()` produces test data, randomizing unset mandatory fields. |
-| `Datasets` | Which datasets to generate: a list of mother invocations (mother reference + overrides); `generate()` yields one dataset per invocation as a JSON array. |
+| `Datasets` | Which datasets to generate: a list of mother invocations (`$mother` reference + overrides); `generate()` yields one dataset per invocation as a JSON array. A `$mother` reference also works inside a nested object field (mother composition), resolved by the same `Schema.valuesOf`. |
 | `RandomValue` | Type-correct random values for unset mandatory fields. |
 | `Validation` | Reusable check outcome: the problems found, or none when valid. |
 | `Migration` | Aggregate mother/data mismatches against a changed schema into one report. |

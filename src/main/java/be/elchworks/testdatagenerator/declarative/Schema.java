@@ -25,6 +25,7 @@ public final class Schema {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
     private static final String EXTENDS = "$extends";
+    private static final String MOTHER = "$mother";
 
     private final JsonNode root;
     private final Map<String, String> types;
@@ -130,7 +131,7 @@ public final class Schema {
             if (set == null && !required) {
                 return Optional.empty();
             }
-            return Optional.of(generateObject(propertySchema, toValues(set)));
+            return Optional.of(generateObject(propertySchema, valuesOf(set)));
         }
         if (set != null) {
             return Optional.of(set);
@@ -145,10 +146,23 @@ public final class Schema {
         return "object".equals(propertySchema.get("type").asText());
     }
 
-    private static Map<String, JsonNode> toValues(JsonNode object) {
+    /**
+     * The values of a mother invocation: the referenced {@code $mother} resolved as the base, with
+     * the invocation's own fields applied as overrides. Used both for a nested object field and for a
+     * top-level dataset invocation.
+     */
+    Map<String, JsonNode> valuesOf(JsonNode invocation) {
         Map<String, JsonNode> values = new HashMap<>();
-        if (object != null) {
-            object.properties().forEach(field -> values.put(field.getKey(), field.getValue()));
+        if (invocation == null) {
+            return values;
+        }
+        if (invocation.has(MOTHER)) {
+            values.putAll(resolve(invocation.get(MOTHER).asText()));
+        }
+        for (Map.Entry<String, JsonNode> field : invocation.properties()) {
+            if (!field.getKey().equals(MOTHER)) {
+                values.put(field.getKey(), field.getValue());
+            }
         }
         return values;
     }

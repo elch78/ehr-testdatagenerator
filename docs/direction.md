@@ -92,8 +92,9 @@ That is core-model work and comes before the delivery shell:
 10. ✅ **Nested objects in the schema** — a property may be an object with its own properties and
     required fields; generation recurses, filling nested mandatory fields — `NestedObjectSchemaTest`.
     (Arrays still open.)
-11. ⬜ **Nested mother invocations** — an override may itself be a mother invocation, so datasets
-    are composed as a tree (builds on 9 + 10).
+11. ✅ **Nested mother invocations** — a field may reference another mother via `$mother`, resolved
+    as a base with sibling overrides; the same machinery as a dataset invocation, one level deeper,
+    so datasets compose as a tree — `ComposeMothersTest`.
 12. ⬜ Delivery (CLI) as a thin shell that takes the three inputs (schema, mothers, datasets) and
     renders the datasets. Decision: **CLI** (in-process testable thin shell), not a web service.
 
