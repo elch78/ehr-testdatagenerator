@@ -60,7 +60,7 @@ Declarative path:
 
 | Class | Responsibility |
 |-------|----------------|
-| `Schema` | Declarative entry point: parse a schema, register named mothers (JSON/YAML), `validate`/`validateData`. |
+| `Schema` | Declarative entry point: parse a schema, register named mothers (JSON/YAML), `validate`/`validateData`. Validation is delegated to the **networknt** JSON Schema validator (Draft 2020-12), which validates directly on the Jackson 3 `JsonNode`. Two project rules shape it: unknown properties are rejected by default (`additionalProperties:false` is injected into every object unless the schema sets it itself — opt out with `additionalProperties:true`), and mothers are validated against a `required`-stripped copy of the schema (a mother is partial, so a missing mandatory field is not a problem — the generator fills it). |
 | `Mother` | A resolved mother; `generate()` produces test data, randomizing unset mandatory fields. |
 | `Datasets` | Which datasets to generate: a list of mother invocations (`$mother` reference + overrides); `generate()` yields one dataset per invocation as a JSON array. A `$mother` reference also works inside a nested object field (mother composition), resolved by the same `Schema.valuesOf`. |
 | `RandomValue` | Type-correct random values for unset mandatory fields. |
@@ -95,10 +95,8 @@ Visibility: private by default; only the public API (`Schema`, `Mother`, `Valida
 ## Known gaps / direction
 
 - Schema support is `object` (incl. **nested** objects) + scalar `string`/`integer`; **arrays** not
-  yet. Generation recurses into nested objects and randomizes their mandatory fields; validation is
-  still **top-level only** (nested properties are not yet validated).
-- Validation/migration check property **existence** (unknown properties, missing mandatory fields),
-  not yet **type** mismatches.
+  yet. Generation recurses into nested objects and randomizes their mandatory fields; validation now
+  covers nested properties and **type** mismatches too (both came for free with the networknt swap).
 - The Java path does not yet emit a mother, and its builders are **dynamic** (`set("name", value)`)
   rather than typed (`.name(...)`).
 - The CLI exists as a library seam (`Cli.run(args)`) but has no executable `main`/packaging yet, and

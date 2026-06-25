@@ -55,4 +55,45 @@ class ValidateTestDataTest {
         assertThat(validation.isValid()).isFalse();
         assertThat(validation.problems()).anyMatch(problem -> problem.contains("nickname"));
     }
+
+    private static Schema personWithAddressSchema() {
+        return Schema.parse("""
+                {
+                  "type": "object",
+                  "title": "Person",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "address": {
+                      "type": "object",
+                      "properties": {
+                        "street": { "type": "string" },
+                        "city":   { "type": "string" }
+                      },
+                      "required": ["city"]
+                    }
+                  },
+                  "required": ["name"]
+                }
+                """);
+    }
+
+    @Test
+    void missingRequiredPropertyInsideNestedObjectIsReported() {
+        Validation validation = personWithAddressSchema().validateData("""
+                { "name": "Alice", "address": { "street": "Main St" } }
+                """);
+
+        assertThat(validation.isValid()).isFalse();
+        assertThat(validation.problems()).anyMatch(problem -> problem.contains("city"));
+    }
+
+    @Test
+    void unknownPropertyInsideNestedObjectIsReported() {
+        Validation validation = personWithAddressSchema().validateData("""
+                { "name": "Alice", "address": { "city": "Brussels", "zip": "1000" } }
+                """);
+
+        assertThat(validation.isValid()).isFalse();
+        assertThat(validation.problems()).anyMatch(problem -> problem.contains("zip"));
+    }
 }

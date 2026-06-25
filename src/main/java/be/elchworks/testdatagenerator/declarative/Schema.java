@@ -1,5 +1,8 @@
 package be.elchworks.testdatagenerator.declarative;
 
+import com.networknt.schema.InputFormat;
+import com.networknt.schema.SchemaRegistry;
+import com.networknt.schema.SpecificationVersion;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -10,16 +13,27 @@ import tools.jackson.dataformat.yaml.YAMLMapper;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * A JSON schema describing the shape of a test data type. Entry point for the declarative path:
  * named {@link Mother mothers} are defined against the schema and generate test data, and may
  * build on one another through the {@code $extends} property.
+ *
+ * <p>Validation is delegated to a JSON Schema validator. Two rules shape it:
+ * <ul>
+ *   <li><b>Unknown properties are rejected by default.</b> Every object the schema describes is
+ *   validated as if it declared {@code "additionalProperties": false}, because for migration an
+ *   unknown property is exactly the mismatch a user must learn about. A schema that deliberately
+ *   allows extras can opt out by setting {@code "additionalProperties": true} itself.</li>
+ *   <li><b>Mothers are partial.</b> A mother only specifies some fields; the generator fills the
+ *   mandatory ones it leaves unset. So a mother is validated against a copy of the schema with its
+ *   {@code required} constraints removed — only the values it does set are checked.</li>
+ * </ul>
  */
 public final class Schema {
 
@@ -29,23 +43,23 @@ public final class Schema {
     private static final String MOTHER = "$mother";
 
     private final JsonNode root;
-    private final Map<String, String> types;
-    private final Set<String> required;
+    private final com.networknt.schema.Schema dataValidator;
+    private final com.networknt.schema.Schema motherValidator;
     private final Map<String, JsonNode> definitions = new HashMap<>();
 
-    private Schema(JsonNode root, Map<String, String> types, Set<String> required) {
+    private Schema(JsonNode root,
+                   com.networknt.schema.Schema dataValidator,
+                   com.networknt.schema.Schema motherValidator) {
         this.root = root;
-        this.types = types;
-        this.required = required;
+        this.dataValidator = dataValidator;
+        this.motherValidator = motherValidator;
     }
 
     public static Schema parse(String schema) {
-        JsonNode root = parse(JSON, schema);
-        Map<String, String> types = new LinkedHashMap<>();
-        for (Map.Entry<String, JsonNode> property : root.get("properties").properties()) {
-            types.put(property.getKey(), property.getValue().get("type").asString());
-        }
-        return new Schema(root, types, requiredFields(root));
+        SchemaRegistry registry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12);
+        return new Schema(parse(JSON, schema),
+                registry.getSchema(strictSchema(schema)),
+                registry.getSchema(partialSchema(schema)));
     }
 
     public void define(String name, String definition) {
@@ -65,29 +79,21 @@ public final class Schema {
     }
 
     public Validation validate(String name) {
-        List<String> problems = new ArrayList<>();
-        for (String property : resolve(name).keySet()) {
-            if (!isKnown(property)) {
-                problems.add("Mother '" + name + "' sets unknown property '" + property + "'");
-            }
-        }
-        return new Validation(problems);
+        ObjectNode mother = JSON.createObjectNode();
+        resolve(name).forEach(mother::set);
+        return new Validation(problems(motherValidator, mother.toString(), "Mother '" + name + "': "));
     }
 
     public Validation validateData(String testData) {
-        JsonNode data = parse(JSON, testData);
+        return new Validation(problems(dataValidator, testData, "Test data: "));
+    }
+
+    private List<String> problems(com.networknt.schema.Schema validator, String json, String prefix) {
         List<String> problems = new ArrayList<>();
-        for (Map.Entry<String, JsonNode> field : data.properties()) {
-            if (!isKnown(field.getKey())) {
-                problems.add("Test data sets unknown property '" + field.getKey() + "'");
-            }
+        for (var error : validator.validate(json, InputFormat.JSON)) {
+            problems.add(prefix + error.getMessage());
         }
-        for (String property : required) {
-            if (!data.has(property)) {
-                problems.add("Test data is missing required property '" + property + "'");
-            }
-        }
-        return new Validation(problems);
+        return problems;
     }
 
     Map<String, JsonNode> resolve(String name) {
@@ -168,10 +174,6 @@ public final class Schema {
         return values;
     }
 
-    private boolean isKnown(String property) {
-        return types.containsKey(property);
-    }
-
     private static Set<String> requiredFields(JsonNode root) {
         Set<String> required = new HashSet<>();
         JsonNode node = root.get("required");
@@ -179,6 +181,51 @@ public final class Schema {
             node.forEach(field -> required.add(field.asString()));
         }
         return required;
+    }
+
+    private static JsonNode strictSchema(String schema) {
+        JsonNode node = parse(JSON, schema);
+        rejectUnknownProperties(node);
+        return node;
+    }
+
+    private static JsonNode partialSchema(String schema) {
+        JsonNode node = strictSchema(schema);
+        removeRequired(node);
+        return node;
+    }
+
+    /** Makes every object in the schema reject unknown properties, unless it already says otherwise. */
+    private static void rejectUnknownProperties(JsonNode node) {
+        if (!describesObject(node)) {
+            return;
+        }
+        ObjectNode object = (ObjectNode) node;
+        if (!object.has("additionalProperties")) {
+            object.put("additionalProperties", false);
+        }
+        forEachPropertySchema(object, Schema::rejectUnknownProperties);
+    }
+
+    /** Drops every {@code required} constraint, so a partial mother is not faulted for missing fields. */
+    private static void removeRequired(JsonNode node) {
+        if (!describesObject(node)) {
+            return;
+        }
+        ObjectNode object = (ObjectNode) node;
+        object.remove("required");
+        forEachPropertySchema(object, Schema::removeRequired);
+    }
+
+    private static void forEachPropertySchema(ObjectNode object, Consumer<JsonNode> action) {
+        for (Map.Entry<String, JsonNode> property : object.get("properties").properties()) {
+            action.accept(property.getValue());
+        }
+    }
+
+    private static boolean describesObject(JsonNode node) {
+        JsonNode type = node.get("type");
+        return type != null && "object".equals(type.asString()) && node.has("properties");
     }
 
     private static JsonNode parse(ObjectMapper format, String text) {

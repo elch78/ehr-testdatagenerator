@@ -89,8 +89,20 @@ Validation report = new Migration(newSchema)
         .report();
 
 report.isValid();   // false if anything no longer fits
-report.problems();  // e.g. "Mother 'alice' sets unknown property 'age'"
+report.problems();  // e.g. "Mother 'alice': property 'age' is not defined in the schema ..."
 ```
+
+Validation is delegated to a JSON Schema validator and follows two rules:
+
+- **Unknown properties are rejected by default.** Every object the schema describes is validated as
+  if it declared `"additionalProperties": false` — for migration, a property the schema no longer
+  knows is exactly the mismatch you need to learn about. A schema that deliberately allows extra
+  properties can opt out by setting `"additionalProperties": true` itself.
+- **Mothers are partial.** A mother only sets some fields; the generator fills the mandatory ones it
+  leaves unset. So a mother is checked against the schema with its `required` constraints removed —
+  only the values it does set are validated (unknown properties, type mismatches), never a missing
+  mandatory field. Test data, by contrast, is a complete instance and *is* checked for missing
+  mandatory fields.
 
 ### Serialize a hand-written builder to JSON
 
@@ -129,7 +141,7 @@ internally as Jackson `JsonNode` trees so JSON and YAML are interchangeable inpu
 
 | Class | Responsibility |
 |-------|----------------|
-| `Schema` | Declarative entry point: parses a schema, registers named mothers (JSON/YAML), validates mothers and test data. |
+| `Schema` | Declarative entry point: parses a schema, registers named mothers (JSON/YAML), validates mothers and test data (via a JSON Schema validator). |
 | `Mother` | A resolved mother; `generate()` produces test data, randomizing unset mandatory fields. |
 | `RandomValue` | Type-correct random values for mandatory fields a mother leaves unset. |
 | `Validation` | Reusable outcome of a check: the problems found, or none when valid. |
@@ -146,10 +158,8 @@ string assembly painful.
 
 ### Current limitations
 
-- Schema support: `object` with scalar properties (`string`, `integer`) only; no nested objects or
-  arrays.
-- Validation and migration check property **existence** (unknown properties, missing mandatory
-  fields), not yet **type** mismatches.
+- Schema support: `object` (including **nested** objects) with scalar properties (`string`,
+  `integer`); **arrays** are not supported yet.
 - The Java code-generation path does not yet emit a mother, and its builders are dynamic, not typed.
 - Everything runs in memory at runtime; there is no build-time plugin and no CLI/service yet.
 
