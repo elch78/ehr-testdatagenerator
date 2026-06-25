@@ -1,8 +1,9 @@
 package be.elchworks.testdatagenerator.codegen;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.core.JacksonException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +14,7 @@ import java.util.Map;
  */
 final class JavaSource {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new JsonMapper();
     private static final String PACKAGE = "be.elchworks.testdatagenerator.generated";
 
     private final String typeName;
@@ -26,7 +27,7 @@ final class JavaSource {
 
     static JavaSource fromSchema(String schema) {
         JsonNode root = parse(schema);
-        String typeName = root.get("title").asText();
+        String typeName = root.get("title").asString();
         String code = "package " + PACKAGE + ";\n\n"
                 + "public record " + typeName + "(" + components(root) + ") {\n}\n";
         return new JavaSource(typeName, code);
@@ -35,7 +36,7 @@ final class JavaSource {
     private static String components(JsonNode root) {
         List<String> components = new ArrayList<>();
         for (Map.Entry<String, JsonNode> property : root.get("properties").properties()) {
-            String javaType = javaType(property.getValue().get("type").asText());
+            String javaType = javaType(property.getValue().get("type").asString());
             components.add(javaType + " " + property.getKey());
         }
         return String.join(", ", components);
@@ -52,7 +53,7 @@ final class JavaSource {
     private static JsonNode parse(String schema) {
         try {
             return MAPPER.readTree(schema);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalArgumentException("Invalid JSON schema", e);
         }
     }

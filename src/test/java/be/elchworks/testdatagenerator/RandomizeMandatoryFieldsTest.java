@@ -1,8 +1,9 @@
 package be.elchworks.testdatagenerator;
 
 import be.elchworks.testdatagenerator.declarative.Schema;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -13,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class RandomizeMandatoryFieldsTest {
 
-    private final ObjectMapper json = new ObjectMapper();
+    private final ObjectMapper json = new JsonMapper();
 
     @Test
     void unsetMandatoryFieldsAreFilledWithRandomValues() throws Exception {
@@ -43,14 +44,14 @@ class RandomizeMandatoryFieldsTest {
         JsonNode second = json.readTree(product.mother("product").generate());
 
         // then the set field keeps its value
-        assertThat(first.get("name").asText()).isEqualTo("Widget");
+        assertThat(first.get("name").asString()).isEqualTo("Widget");
 
         // and the mandatory fields are filled with type-correct values though unset
-        assertThat(first.get("serialNumber").asText()).isNotBlank();
+        assertThat(first.get("serialNumber").asString()).isNotBlank();
         assertThat(first.get("quantity").isInt()).isTrue();
 
         // and the random values differ between generations
-        assertThat(first.get("serialNumber").asText())
-                .isNotEqualTo(second.get("serialNumber").asText());
+        assertThat(first.get("serialNumber").asString())
+                .isNotEqualTo(second.get("serialNumber").asString());
     }
 }

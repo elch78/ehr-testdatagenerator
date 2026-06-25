@@ -1,8 +1,9 @@
 package be.elchworks.testdatagenerator;
 
 import be.elchworks.testdatagenerator.declarative.Schema;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -15,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ComposeMothersTest {
 
-    private final ObjectMapper json = new ObjectMapper();
+    private final ObjectMapper json = new JsonMapper();
 
     @Test
     void fieldReferencingAnotherMotherIsResolved() throws Exception {
@@ -54,10 +55,10 @@ class ComposeMothersTest {
         JsonNode data = json.readTree(person.mother("person").generate());
 
         // then the referenced mother is resolved into the field, its set value kept
-        assertThat(data.get("name").asText()).isEqualTo("Alice");
-        assertThat(data.get("address").get("city").asText()).isEqualTo("Berlin");
+        assertThat(data.get("name").asString()).isEqualTo("Alice");
+        assertThat(data.get("address").get("city").asString()).isEqualTo("Berlin");
 
         // and its mandatory field left unset is randomized, proving full resolution not a literal copy
-        assertThat(data.get("address").get("street").asText()).isNotBlank();
+        assertThat(data.get("address").get("street").asString()).isNotBlank();
     }
 }

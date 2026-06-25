@@ -2,9 +2,9 @@ package be.elchworks.testdatagenerator.cli;
 
 import be.elchworks.testdatagenerator.Json;
 import be.elchworks.testdatagenerator.declarative.Schema;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.dataformat.yaml.YAMLMapper;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -20,7 +20,7 @@ import java.util.Map;
  */
 public final class Cli {
 
-    private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
+    private static final ObjectMapper YAML = new YAMLMapper();
 
     private Cli() {
     }

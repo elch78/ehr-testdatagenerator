@@ -1,7 +1,7 @@
 package be.elchworks.testdatagenerator.declarative;
 
 import be.elchworks.testdatagenerator.Json;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 import java.util.Map;
 

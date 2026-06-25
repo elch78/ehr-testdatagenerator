@@ -1,8 +1,9 @@
 package be.elchworks.testdatagenerator;
 
 import be.elchworks.testdatagenerator.declarative.Schema;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -14,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class NestedObjectSchemaTest {
 
-    private final ObjectMapper json = new ObjectMapper();
+    private final ObjectMapper json = new JsonMapper();
 
     @Test
     void mandatoryFieldsOfANestedObjectAreRandomized() throws Exception {
@@ -49,10 +50,10 @@ class NestedObjectSchemaTest {
         JsonNode data = json.readTree(person.mother("person").generate());
 
         // then the values the mother set are kept, nested structure preserved
-        assertThat(data.get("name").asText()).isEqualTo("Alice");
-        assertThat(data.get("address").get("street").asText()).isEqualTo("Main St");
+        assertThat(data.get("name").asString()).isEqualTo("Alice");
+        assertThat(data.get("address").get("street").asString()).isEqualTo("Main St");
 
         // and the mandatory nested field the mother left unset is filled with a random value
-        assertThat(data.get("address").get("city").asText()).isNotBlank();
+        assertThat(data.get("address").get("city").asString()).isNotBlank();
     }
 }

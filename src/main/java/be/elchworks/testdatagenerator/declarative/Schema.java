@@ -1,10 +1,11 @@
 package be.elchworks.testdatagenerator.declarative;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
+import tools.jackson.dataformat.yaml.YAMLMapper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,8 +23,8 @@ import java.util.Set;
  */
 public final class Schema {
 
-    private static final ObjectMapper JSON = new ObjectMapper();
-    private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
+    private static final ObjectMapper JSON = new JsonMapper();
+    private static final ObjectMapper YAML = new YAMLMapper();
     private static final String EXTENDS = "$extends";
     private static final String MOTHER = "$mother";
 
@@ -42,7 +43,7 @@ public final class Schema {
         JsonNode root = parse(JSON, schema);
         Map<String, String> types = new LinkedHashMap<>();
         for (Map.Entry<String, JsonNode> property : root.get("properties").properties()) {
-            types.put(property.getKey(), property.getValue().get("type").asText());
+            types.put(property.getKey(), property.getValue().get("type").asString());
         }
         return new Schema(root, types, requiredFields(root));
     }
@@ -100,7 +101,7 @@ public final class Schema {
         if (!definition.has(EXTENDS)) {
             return new HashMap<>();
         }
-        return resolve(definition.get(EXTENDS).asText());
+        return resolve(definition.get(EXTENDS).asString());
     }
 
     private void addOwnValues(JsonNode definition, Map<String, JsonNode> values) {
@@ -137,13 +138,13 @@ public final class Schema {
             return Optional.of(set);
         }
         if (required) {
-            return Optional.of(RandomValue.forType(propertySchema.get("type").asText()));
+            return Optional.of(RandomValue.forType(propertySchema.get("type").asString()));
         }
         return Optional.empty();
     }
 
     private static boolean isObject(JsonNode propertySchema) {
-        return "object".equals(propertySchema.get("type").asText());
+        return "object".equals(propertySchema.get("type").asString());
     }
 
     /**
@@ -157,7 +158,7 @@ public final class Schema {
             return values;
         }
         if (invocation.has(MOTHER)) {
-            values.putAll(resolve(invocation.get(MOTHER).asText()));
+            values.putAll(resolve(invocation.get(MOTHER).asString()));
         }
         for (Map.Entry<String, JsonNode> field : invocation.properties()) {
             if (!field.getKey().equals(MOTHER)) {
@@ -175,7 +176,7 @@ public final class Schema {
         Set<String> required = new HashSet<>();
         JsonNode node = root.get("required");
         if (node != null) {
-            node.forEach(field -> required.add(field.asText()));
+            node.forEach(field -> required.add(field.asString()));
         }
         return required;
     }
@@ -183,7 +184,7 @@ public final class Schema {
     private static JsonNode parse(ObjectMapper format, String text) {
         try {
             return format.readTree(text);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalArgumentException("Cannot parse definition", e);
         }
     }

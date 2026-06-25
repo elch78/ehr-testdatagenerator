@@ -1,9 +1,10 @@
 package be.elchworks.testdatagenerator.declarative;
 
 import be.elchworks.testdatagenerator.Json;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
 
 /**
  * Which datasets to generate: a list of mother invocations, each a mother reference ({@code $mother})
@@ -12,7 +13,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
  */
 public final class Datasets {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new JsonMapper();
 
     private final Schema schema;
     private final JsonNode invocations;
