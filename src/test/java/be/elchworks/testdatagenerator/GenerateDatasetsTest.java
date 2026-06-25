@@ -31,14 +31,14 @@ class GenerateDatasetsTest {
 
         // and a base mother with default values
         person.define("person", """
-                { "name": "Default", "age": 30 }
+                { "name": "Default", "name": "Tom", "age": 30 }
                 """);
 
         // and a list of two invocations of that mother, each overriding some fields
         String wanted = """
                 [
                   { "$mother": "person", "name": "Bob" },
-                  { "$mother": "person", "name": "Carol", "age": 41 }
+                  { "$mother": "person", "age": 41 }
                 ]
                 """;
 
@@ -49,7 +49,7 @@ class GenerateDatasetsTest {
         assertThatJson(datasets).isEqualTo("""
                 [
                   { "name": "Bob",   "age": 30 },
-                  { "name": "Carol", "age": 41 }
+                  { "name": "Tom",   "age": 41 }
                 ]
                 """);
     }
