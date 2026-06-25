@@ -1,8 +1,10 @@
 # Direction: core model + adapters
 
-Status: **in progress (2026-06-06)** — the declarative core (incl. the **Datasets** input, nested
+Status: **in progress (2026-06-25)** — the declarative core (incl. the **Datasets** input, nested
 objects and mother composition), both input formats, validation, migration and the **CLI** shell are
-implemented. Java export (slice 7) is the main remaining slice. See the slice checklist below.
+implemented. Validation now runs on the **networknt** JSON Schema validator (nested + type
+validation included). Java export (slice 7) is still open. The next focus is reworking generation
+(remove auto-fill, add `$random`) and then arrays + a real FHIR example — see **Upcoming** below.
 
 ## Goal
 
@@ -74,7 +76,10 @@ Everything hangs off one core model; inputs and outputs are adapters around it.
 
 1. ✅ Declarative mother → test data — `GenerateTestDataFromMotherTest`.
 2. ✅ Mother inheritance via `$extends` — `MotherInheritanceTest`.
-3. ✅ Mandatory fields randomized when not set — `RandomizeMandatoryFieldsTest`.
+3. ↩️ ~~Mandatory fields randomized when not set~~ — **REVERSED (2026-06-25).** The generator must
+   only render the mother; filling mandatory fields is the **user's** responsibility (base mother +
+   `$extends`). Auto-fill is being removed in favour of an explicit `$random` directive — see
+   **Upcoming**.
 4. ✅ Mother validation against schema — `ValidateMotherTest`.
 5. ✅ Data validation against schema — `ValidateTestDataTest`.
 6. ✅ Second format (YAML) over the same core — `DefineMotherInYamlTest`.
@@ -99,5 +104,29 @@ That is core-model work and comes before the delivery shell:
     shell), not a web service. `Cli.run(args)` is the seam; an executable `main`/packaging is still
     open.
 
-Possible follow-up to 4/5: **type** validation (a field's value type does not match the schema
-type), which existence-only validation does not yet catch.
+## Upcoming
+
+Validation was rebuilt on the **networknt** JSON Schema validator (replacing the hand-rolled
+existence checks). This brought, for free:
+
+- ✅ **Nested validation** — properties inside nested objects are validated, not only top-level.
+- ✅ **Type validation** — a value whose type does not match the schema is now reported.
+- Two product rules: unknown properties are rejected by default (`additionalProperties:false`
+  injected unless the schema opts out with `true`); mothers are validated as **partial** (checked
+  against a `required`-stripped schema, so a missing mandatory field is not faulted).
+
+Still planned, in order:
+
+1. ⬜ **Generation reworked: no auto-fill.** The generator only renders the mother's values; an
+   unset field is omitted (even if mandatory), and `generate()` does not throw — completeness is the
+   user's responsibility. Then add an explicit, user-invoked **`$random`** directive whose value
+   type comes from the schema (so `$random` on a `format: date` field yields a date). Rewrites
+   `RandomizeMandatoryFieldsTest` / `NestedObjectSchemaTest` to the new spec.
+2. ⬜ **Arrays** — schema, generation and validation support for `array` properties (not handled
+   anywhere yet).
+3. ⬜ **FHIR example** — a realistic end-to-end test driving a trimmed **FHIR Patient** subset
+   (id, gender, birthDate, nested name) through schema → mothers → generate → validate. FHIR's
+   official schema is JSON Schema Draft-06, heavy on `$ref` + `oneOf` (`value[x]`) + arrays; the
+   subset keeps it structural. Proves the validator and generation on a real-world schema.
+
+⬜ **Java export of a mother** (slice 7 above) remains open and independent of the list above.
