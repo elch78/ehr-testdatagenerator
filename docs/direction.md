@@ -105,6 +105,11 @@ That is core-model work and comes before the delivery shell:
     renders the datasets — `GenerateDatasetsFromCliTest`. Decision: **CLI** (in-process testable thin
     shell), not a web service. `Cli.run(args)` is the seam; an executable `main`/packaging is still
     open.
+13. ✅ Directory convention — `Cli.generate(dir)` discovers inputs by layout instead of explicit
+    flags: `schema.json`, a `mothers/` directory (all files merged into one mother namespace; a
+    duplicate mother name across files is an error), and a `datasets/` directory; each datasets file
+    yields one output written to `out/<basename>.json`. So a user drops files in a directory and gets
+    one output per dataset file — `GenerateFromDirectoryTest`.
 
 ## Upcoming
 

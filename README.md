@@ -39,6 +39,7 @@ Javadoc states the intent, and the test body is the executable scenario. There a
 | Generate array properties, composing a mother into each element | `Mother.generate()` | `ArraySchemaTest` |
 | Resolve `$ref` into `definitions` when generating and validating | `Mother.generate()` | `RefSchemaTest` |
 | Generate & validate a Patient against the real FHIR schema | `Schema.define(... "$type" ...)` | `FhirPatientExampleTest` |
+| Generate from a directory of inputs by convention, one output per dataset file | `Cli.generate(dir)` | `GenerateFromDirectoryTest` |
 | Fill a field on demand with a schema-typed random value (`$random`) | `Mother.generate()` | `RandomDirectiveTest` |
 | Define a mother in YAML | `Schema.defineYaml(name, yaml)` | `DefineMotherInYamlTest` |
 | Validate a mother against its schema | `Schema.validate(name)` | `ValidateMotherTest` |
@@ -168,7 +169,8 @@ string assembly painful.
   ones). The real FHIR R4 schema is handled end to end; pick a resource out of its `oneOf` root with
   the `$type` directive (`"$type": "Patient"`).
 - The Java code-generation path does not yet emit a mother, and its builders are dynamic, not typed.
-- Everything runs in memory at runtime; there is no build-time plugin and no CLI/service yet.
+- The CLI is a library seam only (`Cli.run(args)` and the directory-convention `Cli.generate(dir)`);
+  there is no executable `main`/packaging, build-time plugin, or web service yet.
 
 ## Development
 
