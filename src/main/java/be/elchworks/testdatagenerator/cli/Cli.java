@@ -4,6 +4,7 @@ import be.elchworks.testdatagenerator.Json;
 import be.elchworks.testdatagenerator.declarative.Schema;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
 import java.io.IOException;
@@ -22,6 +23,7 @@ import java.util.stream.Stream;
  */
 public final class Cli {
 
+    private static final ObjectMapper JSON = new JsonMapper();
     private static final ObjectMapper YAML = new YAMLMapper();
 
     private Cli() {
@@ -76,9 +78,12 @@ public final class Cli {
         return Json.toJson(nodeOf(path));
     }
 
+    /** A {@code .json} file is read as JSON, anything else as YAML (a superset of JSON). Reading JSON
+     * directly also avoids the YAML parser's input-size limit, which a real schema (FHIR) can exceed. */
     private static JsonNode nodeOf(Path path) {
+        ObjectMapper mapper = path.getFileName().toString().endsWith(".json") ? JSON : YAML;
         try {
-            return YAML.readTree(Files.readString(path));
+            return mapper.readTree(Files.readString(path));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
