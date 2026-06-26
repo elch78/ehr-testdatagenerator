@@ -1,0 +1,26 @@
+# A complex base Patient mother and two specialised variants built on it with $extends.
+#
+#   $type      picks the resource to generate out of the schema's oneOf-over-every-resource root
+#   id         $random -> a fresh, schema-valid FHIR id per generated instance
+#   name       an array whose element is composed from a HumanName mother ($mother in an array element)
+#   address    an array element composed from an Address mother (which itself is a nested object)
+patient:
+  $type: Patient
+  resourceType: Patient
+  id: { $random: {} }
+  active: true
+  name:
+    - { $mother: janeDoe }
+  address:
+    - { $mother: berlinHome }
+
+# Inherit everything from `patient`, state only what differs.
+femalePatient:
+  $extends: patient
+  gender: female
+
+malePatient:
+  $extends: patient
+  gender: male
+  name:
+    - { $mother: johnSmith }

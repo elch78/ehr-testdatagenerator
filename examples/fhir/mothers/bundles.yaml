@@ -1,0 +1,34 @@
+# Bundles composed from other mothers. Each entry.resource is a oneOf over every FHIR resource,
+# so the composed mother carries its own $type to say which one this entry is.
+
+# A minimal bundle: one patient and one observation.
+patientBundle:
+  $type: Bundle
+  resourceType: Bundle
+  type: collection
+  entry:
+    - resource: { $mother: femalePatient }
+    - resource: { $mother: bodyWeight }
+
+# A vital-signs panel: one patient and the four vital-sign observations.
+vitalsBundle:
+  $type: Bundle
+  resourceType: Bundle
+  type: collection
+  entry:
+    - resource: { $mother: malePatient }
+    - resource: { $mother: bodyWeight }
+    - resource: { $mother: bodyHeight }
+    - resource: { $mother: bodyTemperature }
+    - resource: { $mother: bloodPressure }
+
+# An oncology case: a patient, a cancer diagnosis (Condition), a tumour-marker result and a weight.
+oncologyCase:
+  $type: Bundle
+  resourceType: Bundle
+  type: collection
+  entry:
+    - resource: { $mother: femalePatient }
+    - resource: { $mother: breastCancer }
+    - resource: { $mother: tumourMarker }
+    - resource: { $mother: bodyWeight }

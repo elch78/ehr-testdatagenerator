@@ -1,0 +1,82 @@
+# Observation mothers. Each is a vital sign about a patient: a CodeableConcept `code`, a `subject`
+# Reference, and a result. They differ in how the result is shaped, to show more of the schema:
+#   - valueQuantity: a nested Quantity (value + unit)
+#   - component:     an array of nested component observations, each with its own Quantity
+bodyWeight:
+  $type: Observation
+  resourceType: Observation
+  id: { $random: {} }
+  status: final
+  category:
+    - { text: Vital Signs }
+  code:
+    text: Body weight
+  subject:
+    reference: Patient/example
+  valueQuantity:
+    value: 72
+    unit: kg
+
+bodyHeight:
+  $type: Observation
+  resourceType: Observation
+  id: { $random: {} }
+  status: final
+  category:
+    - { text: Vital Signs }
+  code:
+    text: Body height
+  subject:
+    reference: Patient/example
+  valueQuantity:
+    value: 178
+    unit: cm
+
+bodyTemperature:
+  $type: Observation
+  resourceType: Observation
+  id: { $random: {} }
+  status: final
+  category:
+    - { text: Vital Signs }
+  code:
+    text: Body temperature
+  subject:
+    reference: Patient/example
+  valueQuantity:
+    value: 36.6
+    unit: Cel
+
+# A blood pressure is one Observation with two component measurements.
+bloodPressure:
+  $type: Observation
+  resourceType: Observation
+  id: { $random: {} }
+  status: final
+  category:
+    - { text: Vital Signs }
+  code:
+    text: Blood pressure panel
+  subject:
+    reference: Patient/example
+  component:
+    - code: { text: Systolic blood pressure }
+      valueQuantity: { value: 120, unit: mmHg }
+    - code: { text: Diastolic blood pressure }
+      valueQuantity: { value: 80, unit: mmHg }
+
+# A tumour marker result, used in the oncology bundle alongside the cancer Condition.
+tumourMarker:
+  $type: Observation
+  resourceType: Observation
+  id: { $random: {} }
+  status: final
+  category:
+    - { text: Laboratory }
+  code:
+    text: CA 15-3
+  subject:
+    reference: Patient/example
+  valueQuantity:
+    value: 45
+    unit: U/mL
