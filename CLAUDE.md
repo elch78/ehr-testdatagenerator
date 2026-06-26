@@ -81,7 +81,7 @@ Delivery shell:
 
 | Class | Responsibility |
 |-------|----------------|
-| `Cli` | Thin adapter over `Schema` (reads JSON or YAML, adds no behaviour). Two entry points: `run(args)` takes the three inputs named explicitly (`--schema`/`--mothers`/`--datasets`) and returns the datasets JSON; `generate(dir)` follows a directory convention — `schema.json`, a `mothers/` directory (all files merged into one mother namespace; duplicate name across files is an error), a `datasets/` directory (each file → one output) — and writes `out/<basename>.json` per datasets file. No executable `main` yet. |
+| `Cli` | Thin adapter over `Schema` (reads JSON or YAML, adds no behaviour). `generate(dir)` follows a directory convention — `schema.json`, a `mothers/` directory (all files merged into one mother namespace; duplicate name across files is an error), a `datasets/` directory (each file → one output) — and writes `out/<basename>.json` per datasets file. No executable `main` yet. |
 
 Internally both paths hold schema and mother definitions as Jackson `JsonNode`, so JSON and YAML are
 interchangeable input formats.
@@ -106,5 +106,5 @@ Visibility: private by default; only the public API (`Schema`, `Mother`, `Valida
   `$ref`, as FHIR uses) are treated as scalars.
 - The Java path does not yet emit a mother, and its builders are **dynamic** (`set("name", value)`)
   rather than typed (`.name(...)`).
-- The CLI exists as a library seam (`Cli.run(args)` and the directory-convention `Cli.generate(dir)`) but has no executable `main`/packaging yet, and
+- The CLI exists as a library seam (the directory-convention `Cli.generate(dir)`) but has no executable `main`/packaging yet, and
   no build-time plugin or web service; everything runs in memory at runtime.

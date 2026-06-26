@@ -101,15 +101,15 @@ That is core-model work and comes before the delivery shell:
 11. ✅ **Nested mother invocations** — a field may reference another mother via `$mother`, resolved
     as a base with sibling overrides; the same machinery as a dataset invocation, one level deeper,
     so datasets compose as a tree — `ComposeMothersTest`.
-12. ✅ Delivery (CLI) as a thin shell that takes the three inputs (schema, mothers, datasets) and
-    renders the datasets — `GenerateDatasetsFromCliTest`. Decision: **CLI** (in-process testable thin
-    shell), not a web service. `Cli.run(args)` is the seam; an executable `main`/packaging is still
-    open.
-13. ✅ Directory convention — `Cli.generate(dir)` discovers inputs by layout instead of explicit
-    flags: `schema.json`, a `mothers/` directory (all files merged into one mother namespace; a
-    duplicate mother name across files is an error), and a `datasets/` directory; each datasets file
-    yields one output written to `out/<basename>.json`. So a user drops files in a directory and gets
-    one output per dataset file — `GenerateFromDirectoryTest`.
+12. ✅ Delivery (CLI), not a web service — a thin, in-process testable shell over the declarative core.
+    First built as `Cli.run(--schema/--mothers/--datasets)` taking the three inputs as explicit file
+    flags; that variant was **removed** in favour of slice 13 once the directory convention proved the
+    more practical single way in.
+13. ✅ Directory convention — `Cli.generate(dir)` discovers inputs by layout: `schema.json`, a
+    `mothers/` directory (all files merged into one mother namespace; a duplicate mother name across
+    files is an error), and a `datasets/` directory; each datasets file yields one output written to
+    `out/<basename>.json`. So a user drops files in a directory and gets one output per dataset file —
+    `GenerateFromDirectoryTest`. This is now the **only** CLI entry point.
 
 ## Upcoming
 

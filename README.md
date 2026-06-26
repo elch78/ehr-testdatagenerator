@@ -169,8 +169,8 @@ string assembly painful.
   ones). The real FHIR R4 schema is handled end to end; pick a resource out of its `oneOf` root with
   the `$type` directive (`"$type": "Patient"`).
 - The Java code-generation path does not yet emit a mother, and its builders are dynamic, not typed.
-- The CLI is a library seam only (`Cli.run(args)` and the directory-convention `Cli.generate(dir)`);
-  there is no executable `main`/packaging, build-time plugin, or web service yet.
+- The CLI is a library seam only (the directory-convention `Cli.generate(dir)`); there is no
+  executable `main`/packaging, build-time plugin, or web service yet.
 
 ## Development
 

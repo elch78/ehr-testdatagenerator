@@ -9,35 +9,22 @@ import tools.jackson.dataformat.yaml.YAMLMapper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
 /**
- * The delivery shell over the declarative core. It reads inputs (JSON or YAML) and wires {@link Schema};
- * it adds no behaviour of its own. Two entry points:
- * <ul>
- *   <li>{@link #run} — the three inputs named explicitly as {@code --schema}/{@code --mothers}/{@code --datasets} files.</li>
- *   <li>{@link #generate} — a directory following a convention: {@code schema.json}, a {@code mothers/}
- *   directory whose files are merged into one mother namespace, and a {@code datasets/} directory whose
- *   files each yield one output written to {@code out/<basename>.json}.</li>
- * </ul>
+ * The delivery shell over the declarative core: it reads inputs (JSON or YAML) and wires {@link Schema},
+ * adding no behaviour of its own. {@link #generate} takes a directory following a convention:
+ * {@code schema.json}, a {@code mothers/} directory whose files are merged into one mother namespace,
+ * and a {@code datasets/} directory whose files each yield one output written to {@code out/<basename>.json}.
  */
 public final class Cli {
 
     private static final ObjectMapper YAML = new YAMLMapper();
 
     private Cli() {
-    }
-
-    public static String run(String... args) {
-        Map<String, String> options = options(args);
-        Schema schema = Schema.parse(jsonOf(Path.of(options.get("--schema"))));
-        defineMothers(schema, nodeOf(Path.of(options.get("--mothers"))));
-        return schema.datasets(jsonOf(Path.of(options.get("--datasets")))).generate();
     }
 
     /**
@@ -69,19 +56,6 @@ public final class Cli {
             String datasets = schema.datasets(jsonOf(file)).generate();
             write(outputDirectory.resolve(baseName(file) + ".json"), datasets);
         }
-    }
-
-    private static void defineMothers(Schema schema, JsonNode mothers) {
-        mothers.properties().forEach(mother ->
-                schema.define(mother.getKey(), Json.toJson(mother.getValue())));
-    }
-
-    private static Map<String, String> options(String... args) {
-        Map<String, String> options = new HashMap<>();
-        for (int i = 0; i < args.length - 1; i += 2) {
-            options.put(args[i], args[i + 1]);
-        }
-        return options;
     }
 
     private static List<Path> filesIn(Path directory) {
