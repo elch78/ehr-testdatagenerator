@@ -60,8 +60,8 @@ Declarative path:
 
 | Class | Responsibility |
 |-------|----------------|
-| `Schema` | Declarative entry point: parse a schema, register named mothers (JSON/YAML), `validate`/`validateData`. Validation is delegated to the **networknt** JSON Schema validator (Draft 2020-12), which validates directly on the Jackson 3 `JsonNode`. Two project rules shape it: unknown properties are rejected by default (`additionalProperties:false` is injected into every object unless the schema sets it itself — opt out with `additionalProperties:true`), and mothers are validated against a `required`-stripped copy of the schema (a mother is partial, so a missing mandatory field is not a problem — completeness is the user's job). The `$random` directive is stripped before mother validation (it is an instruction, not data). |
-| `Mother` | A resolved mother; `generate()` renders **only** what the mother sets — an unset field is omitted (even if mandatory) and `generate()` never throws. A `$random` directive (`{ "$random": {} }`) is resolved to a schema-typed random value. |
+| `Schema` | Declarative entry point: parse a schema, register named mothers (JSON/YAML), `validate`/`validateData`. Validation is delegated to the **networknt** JSON Schema validator on the Jackson 3 `JsonNode`. The registry defaults to **Draft 2020-12** (our own schemas declare no `$schema`) and also registers a **Draft 6** dialect for the FHIR schema, tweaked to tolerate that schema's quirks (`discriminator` kept as an annotation; the stray draft-04 `id` redeclared non-validating). Two project rules shape validation: unknown properties are rejected by default (`additionalProperties:false` injected into every object unless the schema opts out with `additionalProperties:true`), and mothers are validated against a `required`-stripped copy (a mother is partial — completeness is the user's job). Both transforms `walk` through `$ref` into `definitions` so they reach referenced types and terminate on recursive schemas. The `$random` directive is stripped before mother validation (an instruction, not data). |
+| `Mother` | A resolved mother; `generate()` renders **only** what the mother sets — an unset field is omitted (even if mandatory) and `generate()` never throws. A `$random` directive (`{ "$random": {} }`) is resolved to a schema-typed random value. Generation follows `$ref` and recurses into nested objects and arrays. A `$type` directive (`"$type": "Patient"`) points generation at a named `definitions` entry instead of the schema root — needed when the root is a `oneOf` over many types (FHIR); it is not a schema property, so it is never rendered. |
 | `Datasets` | Which datasets to generate: a list of mother invocations (`$mother` reference + overrides); `generate()` yields one dataset per invocation as a JSON array. A `$mother` reference also works inside a nested object field (mother composition), resolved by the same `Schema.valuesOf`. |
 | `RandomValue` | Schema-typed random value for a `$random` directive (string prefixed with the field name, `integer`, `format: date`). |
 | `Validation` | Reusable check outcome: the problems found, or none when valid. |
@@ -94,12 +94,16 @@ Visibility: private by default; only the public API (`Schema`, `Mother`, `Valida
 
 ## Known gaps / direction
 
-- Schema support is `object` (incl. **nested** objects), **arrays** (of scalars or objects), and
-  scalar `string`/`integer`. Generation recurses into nested objects and arrays, rendering only what
-  the mother sets (no auto-fill); an array element may itself be a `$mother` composition. Validation
-  covers nested properties, array elements and **type** mismatches (came for free with the networknt
-  swap). Still inline-only: `$ref`/`definitions` are **not** resolved yet — the gate to the real FHIR
-  schema.
+- Schema support is `object` (incl. **nested** objects), **arrays** (of scalars or objects), scalar
+  `string`/`integer`, and **`$ref`/`definitions`** (a type factored into `#/definitions/...` and
+  referenced). Generation recurses into nested objects and arrays and follows `$ref`, rendering only
+  what the mother sets (no auto-fill); an array element may itself be a `$mother` composition.
+  Validation covers nested properties, array elements, referenced types and **type** mismatches (came
+  for free with the networknt swap). The schema transforms (`additionalProperties:false` injection,
+  `required`-stripping) walk through refs once, so they reach referenced types and terminate on
+  recursive schemas. With these plus the `$type` directive, the **real** FHIR R4 `fhir.schema.json`
+  runs end to end (`FhirPatientExampleTest`). Property schemas without a `type` (`const`/`enum`/bare
+  `$ref`, as FHIR uses) are treated as scalars.
 - The Java path does not yet emit a mother, and its builders are **dynamic** (`set("name", value)`)
   rather than typed (`.name(...)`).
 - The CLI exists as a library seam (`Cli.run(args)`) but has no executable `main`/packaging yet, and

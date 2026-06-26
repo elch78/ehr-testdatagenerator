@@ -37,6 +37,8 @@ Javadoc states the intent, and the test body is the executable scenario. There a
 | Let a mother build on another (`$extends`) | `Schema.define(...)` | `MotherInheritanceTest` |
 | Generate exactly what the mother sets, nothing more | `Mother.generate()` | `GenerateRendersOnlySetValuesTest` |
 | Generate array properties, composing a mother into each element | `Mother.generate()` | `ArraySchemaTest` |
+| Resolve `$ref` into `definitions` when generating and validating | `Mother.generate()` | `RefSchemaTest` |
+| Generate & validate a Patient against the real FHIR schema | `Schema.define(... "$type" ...)` | `FhirPatientExampleTest` |
 | Fill a field on demand with a schema-typed random value (`$random`) | `Mother.generate()` | `RandomDirectiveTest` |
 | Define a mother in YAML | `Schema.defineYaml(name, yaml)` | `DefineMotherInYamlTest` |
 | Validate a mother against its schema | `Schema.validate(name)` | `ValidateMotherTest` |
@@ -161,9 +163,10 @@ string assembly painful.
 
 ### Current limitations
 
-- Schema support: `object` (including **nested** objects), **arrays** (of scalars or objects), and
-  scalar properties (`string`, `integer`). Schemas must be **inline**: `$ref`/`definitions` are not
-  resolved yet, so the real FHIR schema does not work end to end.
+- Schema support: `object` (including **nested** objects), **arrays** (of scalars or objects), scalar
+  properties (`string`, `integer`), and **`$ref`/`definitions`** references (including recursive
+  ones). The real FHIR R4 schema is handled end to end; pick a resource out of its `oneOf` root with
+  the `$type` directive (`"$type": "Patient"`).
 - The Java code-generation path does not yet emit a mother, and its builders are dynamic, not typed.
 - Everything runs in memory at runtime; there is no build-time plugin and no CLI/service yet.
 

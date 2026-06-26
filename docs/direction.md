@@ -1,13 +1,13 @@
 # Direction: core model + adapters
 
 Status: **in progress (2026-06-26)** — the declarative core (incl. the **Datasets** input, nested
-objects, mother composition and now **arrays**), both input formats, validation, migration and the
-**CLI** shell are implemented. Validation now runs on the **networknt** JSON Schema validator (nested
-+ type validation included). The generation rework is **done**: the generator renders only what the
-mother sets (no auto-fill) and an explicit `$random` directive fills a field with a schema-typed
-random value. Java export (slice 7) is still open. The next focus is **`$ref`/`definitions`
-resolution**, which then unlocks driving the **real** `fhir.schema.json` end to end — see **Upcoming**
-below.
+objects, mother composition, **arrays** and now **`$ref`/`definitions`** resolution), both input
+formats, validation, migration and the **CLI** shell are implemented. Validation now runs on the
+**networknt** JSON Schema validator (nested + type validation included). The generation rework is
+**done**: the generator renders only what the mother sets (no auto-fill) and an explicit `$random`
+directive fills a field with a schema-typed random value. The **real** FHIR R4 `fhir.schema.json` now
+drives a Patient end to end (generate + validate), via a `$type` directive that picks the resource out
+of the schema's `oneOf` root. Java export (slice 7) is still open — see **Upcoming** below.
 
 ## Goal
 
@@ -131,12 +131,28 @@ Still planned, in order:
    scalars passes through, an array of objects renders each element by the same rules (so `$mother`
    composition works inside an array), and the schema transforms recurse into `items` so an unknown
    property inside an element is rejected — `ArraySchemaTest`.
-3. ⬜ **`$ref` / `definitions` resolution** — the generator currently reads inline `properties`, so a
-   schema whose types are factored into `#/definitions/...` and referenced via `$ref` (as the real
-   FHIR schema is) generates nothing. Resolve `$ref` during generation (validation already follows
-   refs via networknt) and across the schema transforms. This is the gate to the **real** FHIR schema.
-4. ⬜ **Real FHIR example** — once `$ref` resolves, drive the **real** `fhir.schema.json` (not a
-   hand-trimmed copy) end to end for a **Patient**: define a mother, generate, and validate against
-   the official schema. Decision (2026-06-26): use the real schema, reached via slices 2→3 above.
+3. ✅ **`$ref` / `definitions` resolution** — the generator follows a `$ref` to the type it names,
+   for a direct property and for an array's items, so a schema whose types are factored into
+   `#/definitions/...` (as the real FHIR schema is) generates. The schema transforms walk through
+   refs too (one `walk`, shared by the strict/partial passes), so `additionalProperties:false` and
+   `required`-stripping reach referenced types; a ref is followed at most once, so a recursive schema
+   terminates — `RefSchemaTest`.
+4. ✅ **Real FHIR example** — the **real**, unmodified FHIR R4 `fhir.schema.json` (vendored as a test
+   resource) drives a **Patient** end to end: define a mother, generate, validate against the official
+   schema — `FhirPatientExampleTest`. This forced three additions:
+   - **`$type`** directive — names the resource to build (`"$type": "Patient"`), pointing generation
+     at `#/definitions/Patient`, because the FHIR root is a `oneOf` over every resource rather than a
+     single type. It travels in the JSON (like `$mother` / `$random` / `$ref`), so the CLI carries it;
+     it is not a schema property, so it never appears in the output.
+   - **Type-less property schemas** — FHIR describes values with `const` / `enum` / a bare `$ref` and
+     no `type`; `isObject` / `isArray` are now null-safe and treat those as scalars.
+   - **Validator tolerance for the FHIR schema's quirks** — it declares Draft 6 but uses the draft-04
+     `id` keyword and an OpenAPI `discriminator`. The registry registers a Draft 6 dialect that keeps
+     `discriminator` as an annotation and redeclares `id` as non-validating, alongside the Draft 2020-12
+     default our own (`$schema`-less) schemas use.
 
 ⬜ **Java export of a mother** (slice 7 above) remains open and independent of the list above.
+
+Possible follow-ups surfaced by the FHIR work: a `prefix` option on `$random`; stripping `$type` in
+mother validation (today only generation ignores it); a thin `type("Patient")` Java convenience that
+just injects `$type`.

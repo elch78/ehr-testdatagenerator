@@ -2,7 +2,10 @@ package be.elchworks.testdatagenerator.declarative;
 
 import com.networknt.schema.InputFormat;
 import com.networknt.schema.SchemaRegistry;
-import com.networknt.schema.SpecificationVersion;
+import com.networknt.schema.dialect.Dialect;
+import com.networknt.schema.dialect.Dialects;
+import com.networknt.schema.keyword.NonValidationKeyword;
+import com.networknt.schema.keyword.UnknownKeywordFactory;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -13,9 +16,11 @@ import tools.jackson.dataformat.yaml.YAMLMapper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -41,6 +46,8 @@ public final class Schema {
     private static final String EXTENDS = "$extends";
     private static final String MOTHER = "$mother";
     private static final String RANDOM = "$random";
+    private static final String REF = "$ref";
+    private static final String TYPE = "$type";
 
     private final JsonNode root;
     private final com.networknt.schema.Schema dataValidator;
@@ -56,10 +63,25 @@ public final class Schema {
     }
 
     public static Schema parse(String schema) {
-        SchemaRegistry registry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12);
+        SchemaRegistry registry = registry();
         return new Schema(parse(JSON, schema),
                 registry.getSchema(strictSchema(schema)),
                 registry.getSchema(partialSchema(schema)));
+    }
+
+    /**
+     * A validator registry defaulting to Draft 2020-12 (for our own schemas, which declare no
+     * {@code $schema}), plus a Draft 6 dialect — the version the FHIR schema declares — tweaked to
+     * tolerate that schema's two quirks: its OpenAPI {@code discriminator} (an unknown keyword, kept as
+     * an annotation) and its stray draft-04 {@code id} (a known keyword with no validator in Draft 6,
+     * where the identifier is {@code $id}; redeclared here as non-validating so it is ignored, not rejected).
+     */
+    private static SchemaRegistry registry() {
+        Dialect tolerantDraft6 = Dialect.builder(Dialects.getDraft6())
+                .unknownKeywordFactory(UnknownKeywordFactory.getInstance())
+                .keyword(new NonValidationKeyword("id"))
+                .build();
+        return SchemaRegistry.withDialects(List.of(Dialects.getDraft202012(), tolerantDraft6));
     }
 
     public void define(String name, String definition) {
@@ -134,7 +156,21 @@ public final class Schema {
     }
 
     JsonNode generateData(Map<String, JsonNode> values) {
-        return generateObject(root, values);
+        return generateObject(entrySchema(values), values);
+    }
+
+    /**
+     * Where generation starts: the schema root, unless the mother names a resource with {@code $type}
+     * (e.g. {@code "$type": "Patient"}), which points generation at that {@code definitions} entry — the
+     * way to pick one resource out of a schema whose root is a {@code oneOf} over many, like FHIR's. The
+     * {@code $type} value is not a schema property, so it is never rendered into the output.
+     */
+    private JsonNode entrySchema(Map<String, JsonNode> values) {
+        JsonNode type = values.get(TYPE);
+        if (type == null) {
+            return root;
+        }
+        return pointer(root, "#/definitions/" + type.asString());
     }
 
     private ObjectNode generateObject(JsonNode objectSchema, Map<String, JsonNode> values) {
@@ -158,21 +194,22 @@ public final class Schema {
         if (set == null) {
             return Optional.empty();
         }
+        JsonNode schema = resolveRef(propertySchema);
         if (isRandomDirective(set)) {
-            return Optional.of(RandomValue.forProperty(name, propertySchema));
+            return Optional.of(RandomValue.forProperty(name, schema));
         }
-        if (isObject(propertySchema)) {
-            return Optional.of(generateObject(propertySchema, valuesOf(set)));
+        if (isObject(schema)) {
+            return Optional.of(generateObject(schema, valuesOf(set)));
         }
-        if (isArray(propertySchema)) {
-            return Optional.of(generateArray(propertySchema, set));
+        if (isArray(schema)) {
+            return Optional.of(generateArray(schema, set));
         }
         return Optional.of(set);
     }
 
     /** Renders each element the mother listed: an object element recursively, a scalar element as-is. */
     private ArrayNode generateArray(JsonNode arraySchema, JsonNode elements) {
-        JsonNode itemSchema = arraySchema.get("items");
+        JsonNode itemSchema = resolveRef(arraySchema.get("items"));
         ArrayNode result = JSON.createArrayNode();
         for (JsonNode element : elements) {
             if (isObject(itemSchema)) {
@@ -189,11 +226,34 @@ public final class Schema {
     }
 
     private static boolean isObject(JsonNode propertySchema) {
-        return "object".equals(propertySchema.get("type").asString());
+        return hasType(propertySchema, "object");
     }
 
     private static boolean isArray(JsonNode propertySchema) {
-        return "array".equals(propertySchema.get("type").asString());
+        return hasType(propertySchema, "array");
+    }
+
+    /** A schema may describe a value without a {@code type} (e.g. {@code const}, {@code enum}, a bare {@code $ref}). */
+    private static boolean hasType(JsonNode schema, String type) {
+        JsonNode declared = schema.get("type");
+        return declared != null && type.equals(declared.asString());
+    }
+
+    /** Follows a {@code $ref} to the type it names; a schema that is not a reference is returned as is. */
+    private JsonNode resolveRef(JsonNode schema) {
+        if (!schema.has(REF)) {
+            return schema;
+        }
+        return pointer(root, schema.get(REF).asString());
+    }
+
+    /** Resolves a local JSON pointer such as {@code #/definitions/Member} against the schema root. */
+    private static JsonNode pointer(JsonNode root, String ref) {
+        JsonNode node = root;
+        for (String token : ref.substring(2).split("/")) {
+            node = node.get(token);
+        }
+        return node;
     }
 
     /**
@@ -217,46 +277,54 @@ public final class Schema {
         return values;
     }
 
+    /** Makes every object in the schema reject unknown properties, unless it already says otherwise. */
     private static JsonNode strictSchema(String schema) {
         JsonNode node = parse(JSON, schema);
-        rejectUnknownProperties(node);
-        return node;
-    }
-
-    private static JsonNode partialSchema(String schema) {
-        JsonNode node = strictSchema(schema);
-        removeRequired(node);
-        return node;
-    }
-
-    /** Makes every object in the schema reject unknown properties, unless it already says otherwise. */
-    private static void rejectUnknownProperties(JsonNode node) {
-        if (describesObject(node)) {
-            ObjectNode object = (ObjectNode) node;
+        walk(node, node, new HashSet<>(), object -> {
             if (!object.has("additionalProperties")) {
                 object.put("additionalProperties", false);
             }
-        }
-        forEachSubschema(node, Schema::rejectUnknownProperties);
+        });
+        return node;
     }
 
     /** Drops every {@code required} constraint, so a partial mother is not faulted for missing fields. */
-    private static void removeRequired(JsonNode node) {
-        if (describesObject(node)) {
-            ((ObjectNode) node).remove("required");
-        }
-        forEachSubschema(node, Schema::removeRequired);
+    private static JsonNode partialSchema(String schema) {
+        JsonNode node = strictSchema(schema);
+        walk(node, node, new HashSet<>(), object -> object.remove("required"));
+        return node;
     }
 
-    /** Visits the schemas nested in a node: an object's property schemas, or an array's item schema. */
-    private static void forEachSubschema(JsonNode node, Consumer<JsonNode> action) {
-        if (describesObject(node)) {
-            for (Map.Entry<String, JsonNode> property : node.get("properties").properties()) {
-                action.accept(property.getValue());
-            }
-        } else if (describesArray(node)) {
-            action.accept(node.get("items"));
+    /**
+     * Applies an action to every object the schema describes, descending into an object's property
+     * schemas and an array's item schema, and following each {@code $ref} into the type it names. A ref
+     * is followed at most once, which both avoids redundant work and makes recursive schemas terminate.
+     */
+    private static void walk(JsonNode node, JsonNode root, Set<String> visited, Consumer<ObjectNode> onObject) {
+        JsonNode schema = resolveRef(node, root, visited);
+        if (schema == null) {
+            return;
         }
+        if (describesObject(schema)) {
+            onObject.accept((ObjectNode) schema);
+            for (Map.Entry<String, JsonNode> property : schema.get("properties").properties()) {
+                walk(property.getValue(), root, visited, onObject);
+            }
+        } else if (describesArray(schema)) {
+            walk(schema.get("items"), root, visited, onObject);
+        }
+    }
+
+    /** Follows a {@code $ref}, or returns {@code null} once a ref has already been followed (cycle stop). */
+    private static JsonNode resolveRef(JsonNode node, JsonNode root, Set<String> visited) {
+        if (!node.has(REF)) {
+            return node;
+        }
+        String ref = node.get(REF).asString();
+        if (!visited.add(ref)) {
+            return null;
+        }
+        return pointer(root, ref);
     }
 
     private static boolean describesObject(JsonNode node) {
