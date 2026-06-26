@@ -242,21 +242,17 @@ public final class Schema {
     }
 
     /**
-     * A schema describes an object when it lists {@code properties} — the declared {@code type} is not
-     * required, because the FHIR definitions carry properties without a {@code "type": "object"}.
+     * Object and array are recognised by structure, not by a declared {@code type}: a schema that lists
+     * {@code properties} describes an object, one that lists {@code items} describes an array. A schema
+     * may legitimately omit {@code type} (FHIR's definitions do; so do {@code const}/{@code enum}/bare
+     * {@code $ref} property schemas, which fall through to scalar), so the structure is what we trust.
      */
     private static boolean isObject(JsonNode schema) {
         return schema.has("properties");
     }
 
-    private static boolean isArray(JsonNode propertySchema) {
-        return hasType(propertySchema, "array");
-    }
-
-    /** A schema may describe a value without a {@code type} (e.g. {@code const}, {@code enum}, a bare {@code $ref}). */
-    private static boolean hasType(JsonNode schema, String type) {
-        JsonNode declared = schema.get("type");
-        return declared != null && type.equals(declared.asString());
+    private static boolean isArray(JsonNode schema) {
+        return schema.has("items");
     }
 
     /** Follows a {@code $ref} to the type it names; a schema that is not a reference is returned as is. */
