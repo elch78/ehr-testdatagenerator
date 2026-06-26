@@ -147,9 +147,10 @@ Still planned, in order:
    - **Type-less property schemas** — FHIR describes values with `const` / `enum` / a bare `$ref` and
      no `type`; `isObject` / `isArray` are now null-safe and treat those as scalars.
    - **Validator tolerance for the FHIR schema's quirks** — it declares Draft 6 but uses the draft-04
-     `id` keyword and an OpenAPI `discriminator`. The registry registers a Draft 6 dialect that keeps
-     `discriminator` as an annotation and redeclares `id` as non-validating, alongside the Draft 2020-12
-     default our own (`$schema`-less) schemas use.
+     `id` keyword and an OpenAPI `discriminator`. The registry keeps the full standard dialect set
+     (default Draft 2020-12 for our own `$schema`-less schemas) and overlays only the Draft 6 dialect
+     with a tolerant variant that keeps `discriminator` as an annotation and redeclares `id` as
+     non-validating.
 
 ⬜ **Java export of a mother** (slice 7 above) remains open and independent of the list above.
 

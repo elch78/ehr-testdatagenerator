@@ -2,6 +2,8 @@ package be.elchworks.testdatagenerator.declarative;
 
 import com.networknt.schema.InputFormat;
 import com.networknt.schema.SchemaRegistry;
+import com.networknt.schema.SpecificationVersion;
+import com.networknt.schema.dialect.DefaultDialectRegistry;
 import com.networknt.schema.dialect.Dialect;
 import com.networknt.schema.dialect.Dialects;
 import com.networknt.schema.keyword.NonValidationKeyword;
@@ -70,10 +72,11 @@ public final class Schema {
     }
 
     /**
-     * A validator registry defaulting to Draft 2020-12 (for our own schemas, which declare no
-     * {@code $schema}), plus a Draft 6 dialect — the version the FHIR schema declares — tweaked to
-     * tolerate that schema's two quirks: its OpenAPI {@code discriminator} (an unknown keyword, kept as
-     * an annotation) and its stray draft-04 {@code id} (a known keyword with no validator in Draft 6,
+     * A validator registry that keeps the full set of standard dialects — so any schema's declared
+     * {@code $schema} still resolves — and defaults to Draft 2020-12 for our own schemas, which declare
+     * none. Only the Draft 6 dialect (the version the FHIR schema declares) is overlaid with a tolerant
+     * variant for that schema's two quirks: its OpenAPI {@code discriminator} (an unknown keyword, kept
+     * as an annotation) and its stray draft-04 {@code id} (a known keyword with no validator in Draft 6,
      * where the identifier is {@code $id}; redeclared here as non-validating so it is ignored, not rejected).
      */
     private static SchemaRegistry registry() {
@@ -81,7 +84,8 @@ public final class Schema {
                 .unknownKeywordFactory(UnknownKeywordFactory.getInstance())
                 .keyword(new NonValidationKeyword("id"))
                 .build();
-        return SchemaRegistry.withDialects(List.of(Dialects.getDraft202012(), tolerantDraft6));
+        return SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12,
+                builder -> builder.dialectRegistry(new DefaultDialectRegistry(List.of(tolerantDraft6))));
     }
 
     public void define(String name, String definition) {
