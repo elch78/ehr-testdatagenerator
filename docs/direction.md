@@ -182,3 +182,21 @@ validator error it provokes** (generate broken data *and* know exactly which rul
 "one machinery, applied twice" idea as migration). Design question: *generate-then-mutate* (take a
 valid datum, inject a known violation) vs. a declarative violation directive in the mother. Own ATDD
 slice.
+
+⬜ **Terminology binding (FHIR) — built as a plugin.** The JSON Schema we drive carries no
+machine-readable terminology bindings: `Coding.system`/`Coding.code` are free strings, value sets
+appear only in description prose, and the few `enum`s are just the fixed *required* bindings the FHIR
+publisher inlined (`gender`, `status`, `Bundle.type`). Real bindings live in the StructureDefinitions
+and resolve against a **terminology server** (`$expand`, `$validate-code`). Two integration points:
+- **Generation** — a directive (analogous to `$random`, e.g. `$code`/`$valueset`) draws a real,
+  bound code from a ValueSet expansion (e.g. LOINC `29463-7` for body weight) instead of a bare `text`.
+- **Validation** — terminology validation (`$validate-code`) as an **extra validator layer** beyond
+  structural JSON Schema. It is also the natural producer of the negative case above: a code outside
+  the bound value set is structurally valid but terminologically wrong — a violation networknt cannot
+  see.
+
+This is **FHIR-specific** and **external** (network), so it must **not** sit in the schema-agnostic
+core: build it as an **optional plugin/adapter** behind a small resolver interface, with offline,
+pre-expanded ValueSets as the default (cached local resources, pluggable to a live server such as
+`tx.fhir.org`) so the in-memory property is preserved when the plugin is absent. Own ATDD slice;
+depends on a plugin seam existing first.
