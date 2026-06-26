@@ -162,3 +162,12 @@ Still planned, in order:
 Possible follow-ups surfaced by the FHIR work: a `prefix` option on `$random`; stripping `$type` in
 mother validation (today only generation ignores it); a thin `type("Patient")` Java convenience that
 just injects `$type`.
+
+⬜ **Override ergonomics for arrays.** Today an override (`{ $mother: X, field: new }`) **replaces** a
+field wholesale — there is no deep merge. This works at any depth (an array element can itself be
+`{ $mother: ..., field: new }`, so a sub-mother is reused with one property changed), but for an array
+it means restating the whole list: you cannot append an element or tweak one element in place. FHIR is
+array-heavy (`name[]`, `address[]`, `category[]`, `entry[]`, `component[]`), so this is felt. Surfaced
+by the `examples/fhir` work (see `datasets/observations.yaml`). Option to explore: an array
+merge/append directive or a path-based override — design as its own ATDD slice. For now the idiomatic
+answer is composing small named sub-mothers rather than deep editing.
