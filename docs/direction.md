@@ -171,3 +171,14 @@ array-heavy (`name[]`, `address[]`, `category[]`, `entry[]`, `component[]`), so 
 by the `examples/fhir` work (see `datasets/observations.yaml`). Option to explore: an array
 merge/append directive or a path-based override — design as its own ATDD slice. For now the idiomatic
 answer is composing small named sub-mothers rather than deep editing.
+
+⬜ **Deliberately invalid data (negative test data).** Today everything aims at *valid* generation;
+producing data that intentionally breaks the schema — to test that a system under test rejects bad
+input — is not modelled anywhere. It fits the existing machinery: a violation directive (analogous to
+`$random`, e.g. `$invalid`) or a mother/dataset flag could target one rule — wrong `type`, value
+outside `enum`, `pattern` break, `additionalProperties` violation, missing `required` — and, because
+we already have `validateData` + `Validation`, each generated violation could be **paired with the
+validator error it provokes** (generate broken data *and* know exactly which rule it breaks — the same
+"one machinery, applied twice" idea as migration). Design question: *generate-then-mutate* (take a
+valid datum, inject a known violation) vs. a declarative violation directive in the mother. Own ATDD
+slice.
