@@ -170,11 +170,15 @@ public final class Schema {
      * {@code $type} value is not a schema property, so it is never rendered into the output.
      */
     private JsonNode entrySchema(Map<String, JsonNode> values) {
-        JsonNode type = values.get(TYPE);
-        if (type == null) {
+        if (!values.containsKey(TYPE)) {
             return root;
         }
-        return pointer(root, "#/definitions/" + type.asString());
+        return typeSchema(values);
+    }
+
+    /** The {@code definitions} entry a {@code $type} directive names. */
+    private JsonNode typeSchema(Map<String, JsonNode> values) {
+        return pointer(root, "#/definitions/" + values.get(TYPE).asString());
     }
 
     private ObjectNode generateObject(JsonNode objectSchema, Map<String, JsonNode> values) {
@@ -192,7 +196,9 @@ public final class Schema {
      * (even when the schema marks it required — completeness is the mother's responsibility). A
      * {@code $random} directive is resolved to a type-correct random value drawn from the schema, a
      * nested object the mother sets is generated recursively (so a {@code $mother} reference resolves),
-     * and an array is rendered element by element by the same rules.
+     * and an array is rendered element by element by the same rules. A {@code $type} directive in the
+     * set values selects which {@code definitions} type to generate against — needed where the property
+     * schema is a {@code oneOf} over many types (FHIR's {@code Bundle.entry.resource}).
      */
     private Optional<JsonNode> valueFor(String name, JsonNode propertySchema, JsonNode set) {
         if (set == null) {
@@ -202,8 +208,14 @@ public final class Schema {
         if (isRandomDirective(set)) {
             return Optional.of(RandomValue.forProperty(name, schema));
         }
-        if (isObject(schema)) {
-            return Optional.of(generateObject(schema, valuesOf(set)));
+        if (set.isObject()) {
+            Map<String, JsonNode> values = valuesOf(set);
+            if (values.containsKey(TYPE)) {
+                return Optional.of(generateObject(typeSchema(values), values));
+            }
+            if (isObject(schema)) {
+                return Optional.of(generateObject(schema, values));
+            }
         }
         if (isArray(schema)) {
             return Optional.of(generateArray(schema, set));
@@ -229,8 +241,12 @@ public final class Schema {
         return value.isObject() && value.has(RANDOM);
     }
 
-    private static boolean isObject(JsonNode propertySchema) {
-        return hasType(propertySchema, "object");
+    /**
+     * A schema describes an object when it lists {@code properties} — the declared {@code type} is not
+     * required, because the FHIR definitions carry properties without a {@code "type": "object"}.
+     */
+    private static boolean isObject(JsonNode schema) {
+        return schema.has("properties");
     }
 
     private static boolean isArray(JsonNode propertySchema) {
