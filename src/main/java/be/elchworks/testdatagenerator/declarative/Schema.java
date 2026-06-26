@@ -7,16 +7,15 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.dataformat.yaml.YAMLMapper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -30,9 +29,9 @@ import java.util.function.Consumer;
  *   validated as if it declared {@code "additionalProperties": false}, because for migration an
  *   unknown property is exactly the mismatch a user must learn about. A schema that deliberately
  *   allows extras can opt out by setting {@code "additionalProperties": true} itself.</li>
- *   <li><b>Mothers are partial.</b> A mother only specifies some fields; the generator fills the
- *   mandatory ones it leaves unset. So a mother is validated against a copy of the schema with its
- *   {@code required} constraints removed — only the values it does set are checked.</li>
+ *   <li><b>Mothers are partial.</b> A mother only specifies some fields; completeness is the user's
+ *   job. So a mother is validated against a copy of the schema with its {@code required} constraints
+ *   removed — only the values it does set are checked.</li>
  * </ul>
  */
 public final class Schema {
@@ -41,6 +40,7 @@ public final class Schema {
     private static final ObjectMapper YAML = new YAMLMapper();
     private static final String EXTENDS = "$extends";
     private static final String MOTHER = "$mother";
+    private static final String RANDOM = "$random";
 
     private final JsonNode root;
     private final com.networknt.schema.Schema dataValidator;
@@ -80,8 +80,23 @@ public final class Schema {
 
     public Validation validate(String name) {
         ObjectNode mother = JSON.createObjectNode();
-        resolve(name).forEach(mother::set);
+        resolve(name).forEach((field, value) -> mother.set(field, value.deepCopy()));
+        removeRandomDirectives(mother);
         return new Validation(problems(motherValidator, mother.toString(), "Mother '" + name + "': "));
+    }
+
+    /** Drops {@code $random}-directive fields: they are a generation instruction, not data to validate. */
+    private static void removeRandomDirectives(ObjectNode object) {
+        List<String> directives = new ArrayList<>();
+        for (Map.Entry<String, JsonNode> field : object.properties()) {
+            JsonNode value = field.getValue();
+            if (isRandomDirective(value)) {
+                directives.add(field.getKey());
+            } else if (value.isObject()) {
+                removeRandomDirectives((ObjectNode) value);
+            }
+        }
+        directives.forEach(object::remove);
     }
 
     public Validation validateData(String testData) {
@@ -124,33 +139,61 @@ public final class Schema {
 
     private ObjectNode generateObject(JsonNode objectSchema, Map<String, JsonNode> values) {
         ObjectNode result = JSON.createObjectNode();
-        Set<String> required = requiredFields(objectSchema);
         for (Map.Entry<String, JsonNode> property : objectSchema.get("properties").properties()) {
             String name = property.getKey();
-            valueFor(property.getValue(), required.contains(name), values.get(name))
+            valueFor(name, property.getValue(), values.get(name))
                     .ifPresent(value -> result.set(name, value));
         }
         return result;
     }
 
-    private Optional<JsonNode> valueFor(JsonNode propertySchema, boolean required, JsonNode set) {
+    /**
+     * Renders the value the mother set for a property, and nothing else: an unset property is omitted
+     * (even when the schema marks it required — completeness is the mother's responsibility). A
+     * {@code $random} directive is resolved to a type-correct random value drawn from the schema, a
+     * nested object the mother sets is generated recursively (so a {@code $mother} reference resolves),
+     * and an array is rendered element by element by the same rules.
+     */
+    private Optional<JsonNode> valueFor(String name, JsonNode propertySchema, JsonNode set) {
+        if (set == null) {
+            return Optional.empty();
+        }
+        if (isRandomDirective(set)) {
+            return Optional.of(RandomValue.forProperty(name, propertySchema));
+        }
         if (isObject(propertySchema)) {
-            if (set == null && !required) {
-                return Optional.empty();
-            }
             return Optional.of(generateObject(propertySchema, valuesOf(set)));
         }
-        if (set != null) {
-            return Optional.of(set);
+        if (isArray(propertySchema)) {
+            return Optional.of(generateArray(propertySchema, set));
         }
-        if (required) {
-            return Optional.of(RandomValue.forType(propertySchema.get("type").asString()));
+        return Optional.of(set);
+    }
+
+    /** Renders each element the mother listed: an object element recursively, a scalar element as-is. */
+    private ArrayNode generateArray(JsonNode arraySchema, JsonNode elements) {
+        JsonNode itemSchema = arraySchema.get("items");
+        ArrayNode result = JSON.createArrayNode();
+        for (JsonNode element : elements) {
+            if (isObject(itemSchema)) {
+                result.add(generateObject(itemSchema, valuesOf(element)));
+            } else {
+                result.add(element);
+            }
         }
-        return Optional.empty();
+        return result;
+    }
+
+    private static boolean isRandomDirective(JsonNode value) {
+        return value.isObject() && value.has(RANDOM);
     }
 
     private static boolean isObject(JsonNode propertySchema) {
         return "object".equals(propertySchema.get("type").asString());
+    }
+
+    private static boolean isArray(JsonNode propertySchema) {
+        return "array".equals(propertySchema.get("type").asString());
     }
 
     /**
@@ -174,15 +217,6 @@ public final class Schema {
         return values;
     }
 
-    private static Set<String> requiredFields(JsonNode root) {
-        Set<String> required = new HashSet<>();
-        JsonNode node = root.get("required");
-        if (node != null) {
-            node.forEach(field -> required.add(field.asString()));
-        }
-        return required;
-    }
-
     private static JsonNode strictSchema(String schema) {
         JsonNode node = parse(JSON, schema);
         rejectUnknownProperties(node);
@@ -197,29 +231,31 @@ public final class Schema {
 
     /** Makes every object in the schema reject unknown properties, unless it already says otherwise. */
     private static void rejectUnknownProperties(JsonNode node) {
-        if (!describesObject(node)) {
-            return;
+        if (describesObject(node)) {
+            ObjectNode object = (ObjectNode) node;
+            if (!object.has("additionalProperties")) {
+                object.put("additionalProperties", false);
+            }
         }
-        ObjectNode object = (ObjectNode) node;
-        if (!object.has("additionalProperties")) {
-            object.put("additionalProperties", false);
-        }
-        forEachPropertySchema(object, Schema::rejectUnknownProperties);
+        forEachSubschema(node, Schema::rejectUnknownProperties);
     }
 
     /** Drops every {@code required} constraint, so a partial mother is not faulted for missing fields. */
     private static void removeRequired(JsonNode node) {
-        if (!describesObject(node)) {
-            return;
+        if (describesObject(node)) {
+            ((ObjectNode) node).remove("required");
         }
-        ObjectNode object = (ObjectNode) node;
-        object.remove("required");
-        forEachPropertySchema(object, Schema::removeRequired);
+        forEachSubschema(node, Schema::removeRequired);
     }
 
-    private static void forEachPropertySchema(ObjectNode object, Consumer<JsonNode> action) {
-        for (Map.Entry<String, JsonNode> property : object.get("properties").properties()) {
-            action.accept(property.getValue());
+    /** Visits the schemas nested in a node: an object's property schemas, or an array's item schema. */
+    private static void forEachSubschema(JsonNode node, Consumer<JsonNode> action) {
+        if (describesObject(node)) {
+            for (Map.Entry<String, JsonNode> property : node.get("properties").properties()) {
+                action.accept(property.getValue());
+            }
+        } else if (describesArray(node)) {
+            action.accept(node.get("items"));
         }
     }
 
@@ -228,11 +264,16 @@ public final class Schema {
         return type != null && "object".equals(type.asString()) && node.has("properties");
     }
 
+    private static boolean describesArray(JsonNode node) {
+        JsonNode type = node.get("type");
+        return type != null && "array".equals(type.asString()) && node.has("items");
+    }
+
     private static JsonNode parse(ObjectMapper format, String text) {
         try {
             return format.readTree(text);
         } catch (JacksonException e) {
-            throw new IllegalArgumentException("Cannot parse definition", e);
+            throw new RuntimeException("Cannot parse definition", e);
         }
     }
 }

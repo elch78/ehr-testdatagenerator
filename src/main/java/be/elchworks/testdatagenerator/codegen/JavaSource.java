@@ -46,7 +46,7 @@ final class JavaSource {
         return switch (schemaType) {
             case "string" -> "String";
             case "integer" -> "int";
-            default -> throw new IllegalArgumentException("Unsupported schema type: " + schemaType);
+            default -> throw new RuntimeException("Unsupported schema type: " + schemaType);
         };
     }
 
@@ -54,7 +54,7 @@ final class JavaSource {
         try {
             return MAPPER.readTree(schema);
         } catch (JacksonException e) {
-            throw new IllegalArgumentException("Invalid JSON schema", e);
+            throw new RuntimeException("Invalid JSON schema", e);
         }
     }
 

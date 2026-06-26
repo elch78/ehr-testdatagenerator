@@ -7,7 +7,8 @@ import java.util.Map;
 
 /**
  * A declarative mother: resolved values for a schema type, from which test data is generated.
- * Mandatory fields the mother leaves unset are filled with random values.
+ * Generation renders only what the mother sets — an unset field is omitted, even when mandatory —
+ * except a {@code $random} directive, which is resolved to a schema-typed random value.
  */
 public final class Mother {
 

@@ -26,7 +26,7 @@ final class InMemoryCompiler {
     static Class<?> compile(String qualifiedName, String code) {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         if (compiler == null) {
-            throw new IllegalStateException("No system Java compiler available; run on a JDK, not a JRE");
+            throw new RuntimeException("No system Java compiler available; run on a JDK, not a JRE");
         }
 
         ClassCollectingFileManager fileManager = new ClassCollectingFileManager(compiler.getStandardFileManager(null, null, null));
@@ -36,7 +36,7 @@ final class InMemoryCompiler {
                 .getTask(null, fileManager, diagnostics, null, null, List.of(new StringSource(qualifiedName, code)))
                 .call();
         if (!success) {
-            throw new IllegalStateException("Compilation failed: " + diagnostics.getDiagnostics());
+            throw new RuntimeException("Compilation failed: " + diagnostics.getDiagnostics());
         }
 
         return fileManager.loadCompiledClass(qualifiedName);
@@ -102,7 +102,7 @@ final class InMemoryCompiler {
             try {
                 return loader.loadClass(qualifiedName);
             } catch (ClassNotFoundException e) {
-                throw new IllegalStateException(e);
+                throw new RuntimeException(e);
             }
         }
     }

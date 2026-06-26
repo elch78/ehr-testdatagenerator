@@ -1,24 +1,20 @@
 package be.elchworks.testdatagenerator;
 
 import be.elchworks.testdatagenerator.declarative.Schema;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
 /**
  * As a user I want my schema to describe nested objects, so that a mother can set part of a nested
- * object while the generator fills the nested object's mandatory fields it leaves unset — the same
- * promise as {@link RandomizeMandatoryFieldsTest}, one level deeper.
+ * object and have exactly that rendered — the generator descends into the nested object but, like the
+ * top level ({@link GenerateRendersOnlySetValuesTest}), renders only what the mother sets and omits
+ * the rest.
  */
 class NestedObjectSchemaTest {
 
-    private final ObjectMapper json = new JsonMapper();
-
     @Test
-    void mandatoryFieldsOfANestedObjectAreRandomized() throws Exception {
+    void nestedObjectRendersOnlyWhatTheMotherSets() {
         // given a Person schema whose mandatory address is a nested object with a mandatory city
         String schema = """
                 {
@@ -47,13 +43,11 @@ class NestedObjectSchemaTest {
                 """);
 
         // when test data is generated
-        JsonNode data = json.readTree(person.mother("person").generate());
+        String data = person.mother("person").generate();
 
-        // then the values the mother set are kept, nested structure preserved
-        assertThat(data.get("name").asString()).isEqualTo("Alice");
-        assertThat(data.get("address").get("street").asString()).isEqualTo("Main St");
-
-        // and the mandatory nested field the mother left unset is filled with a random value
-        assertThat(data.get("address").get("city").asString()).isNotBlank();
+        // then the set values are kept and the unset nested mandatory city is omitted, not filled
+        assertThatJson(data).isEqualTo("""
+                { "name": "Alice", "address": { "street": "Main St" } }
+                """);
     }
 }

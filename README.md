@@ -35,7 +35,9 @@ Javadoc states the intent, and the test body is the executable scenario. There a
 | Build a domain object and serialize it to JSON | `Json.toJson(object)` | `BuildObjectAsJsonTest` |
 | Generate test data from a declarative mother | `Schema.parse(schema).mother(name).generate()` | `GenerateTestDataFromMotherTest` |
 | Let a mother build on another (`$extends`) | `Schema.define(...)` | `MotherInheritanceTest` |
-| Fill unset mandatory fields with random values | `Mother.generate()` | `RandomizeMandatoryFieldsTest` |
+| Generate exactly what the mother sets, nothing more | `Mother.generate()` | `GenerateRendersOnlySetValuesTest` |
+| Generate array properties, composing a mother into each element | `Mother.generate()` | `ArraySchemaTest` |
+| Fill a field on demand with a schema-typed random value (`$random`) | `Mother.generate()` | `RandomDirectiveTest` |
 | Define a mother in YAML | `Schema.defineYaml(name, yaml)` | `DefineMotherInYamlTest` |
 | Validate a mother against its schema | `Schema.validate(name)` | `ValidateMotherTest` |
 | Validate test data against its schema | `Schema.validateData(json)` | `ValidateTestDataTest` |
@@ -65,8 +67,10 @@ person.define("alice", """
 String testData = person.mother("alice").generate(); // {"name":"Alice","age":30}
 ```
 
-Mothers may build on one another and be written in YAML; mandatory fields a mother leaves unset are
-filled with random values:
+Generation renders **only** what the mother sets — an unset field is omitted, even when the schema
+marks it required, and `generate()` never throws. Completeness is the mother's job: build on a base
+mother, or ask for a value explicitly with the `$random` directive, whose type follows the schema (a
+plain string is prefixed with the field name for traceability, a `format: date` field yields a date):
 
 ```java
 person.define("base", """
@@ -74,7 +78,7 @@ person.define("base", """
         """);
 person.defineYaml("child", """
         $extends: base
-        age: 30
+        age: { "$random": {} }
         """);
 ```
 
@@ -98,11 +102,10 @@ Validation is delegated to a JSON Schema validator and follows two rules:
   if it declared `"additionalProperties": false` — for migration, a property the schema no longer
   knows is exactly the mismatch you need to learn about. A schema that deliberately allows extra
   properties can opt out by setting `"additionalProperties": true` itself.
-- **Mothers are partial.** A mother only sets some fields; the generator fills the mandatory ones it
-  leaves unset. So a mother is checked against the schema with its `required` constraints removed —
-  only the values it does set are validated (unknown properties, type mismatches), never a missing
-  mandatory field. Test data, by contrast, is a complete instance and *is* checked for missing
-  mandatory fields.
+- **Mothers are partial.** A mother only sets some fields; completeness is the user's job. So a mother
+  is checked against the schema with its `required` constraints removed — only the values it does set
+  are validated (unknown properties, type mismatches), never a missing mandatory field. Test data, by
+  contrast, is a complete instance and *is* checked for missing mandatory fields.
 
 ### Serialize a hand-written builder to JSON
 
@@ -142,8 +145,8 @@ internally as Jackson `JsonNode` trees so JSON and YAML are interchangeable inpu
 | Class | Responsibility |
 |-------|----------------|
 | `Schema` | Declarative entry point: parses a schema, registers named mothers (JSON/YAML), validates mothers and test data (via a JSON Schema validator). |
-| `Mother` | A resolved mother; `generate()` produces test data, randomizing unset mandatory fields. |
-| `RandomValue` | Type-correct random values for mandatory fields a mother leaves unset. |
+| `Mother` | A resolved mother; `generate()` renders only what the mother sets (no auto-fill), resolving any `$random` directive. |
+| `RandomValue` | Schema-typed random value for a `$random` directive (field-name-prefixed string, integer, or `format: date`). |
 | `Validation` | Reusable outcome of a check: the problems found, or none when valid. |
 | `Migration` | Collects every mother/data mismatch against a changed schema into one report. |
 | `Json` | Serializes any object to JSON (Jackson). |
@@ -158,8 +161,9 @@ string assembly painful.
 
 ### Current limitations
 
-- Schema support: `object` (including **nested** objects) with scalar properties (`string`,
-  `integer`); **arrays** are not supported yet.
+- Schema support: `object` (including **nested** objects), **arrays** (of scalars or objects), and
+  scalar properties (`string`, `integer`). Schemas must be **inline**: `$ref`/`definitions` are not
+  resolved yet, so the real FHIR schema does not work end to end.
 - The Java code-generation path does not yet emit a mother, and its builders are dynamic, not typed.
 - Everything runs in memory at runtime; there is no build-time plugin and no CLI/service yet.
 

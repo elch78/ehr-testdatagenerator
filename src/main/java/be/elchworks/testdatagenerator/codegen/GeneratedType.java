@@ -52,7 +52,7 @@ public final class GeneratedType {
                 constructor.setAccessible(true);
                 return constructor.newInstance(arguments);
             } catch (ReflectiveOperationException e) {
-                throw new IllegalStateException("Cannot instantiate " + type.getName(), e);
+                throw new RuntimeException("Cannot instantiate " + type.getName(), e);
             }
         }
     }

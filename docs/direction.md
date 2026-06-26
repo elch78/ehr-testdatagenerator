@@ -1,10 +1,13 @@
 # Direction: core model + adapters
 
-Status: **in progress (2026-06-25)** — the declarative core (incl. the **Datasets** input, nested
-objects and mother composition), both input formats, validation, migration and the **CLI** shell are
-implemented. Validation now runs on the **networknt** JSON Schema validator (nested + type
-validation included). Java export (slice 7) is still open. The next focus is reworking generation
-(remove auto-fill, add `$random`) and then arrays + a real FHIR example — see **Upcoming** below.
+Status: **in progress (2026-06-26)** — the declarative core (incl. the **Datasets** input, nested
+objects, mother composition and now **arrays**), both input formats, validation, migration and the
+**CLI** shell are implemented. Validation now runs on the **networknt** JSON Schema validator (nested
++ type validation included). The generation rework is **done**: the generator renders only what the
+mother sets (no auto-fill) and an explicit `$random` directive fills a field with a schema-typed
+random value. Java export (slice 7) is still open. The next focus is **`$ref`/`definitions`
+resolution**, which then unlocks driving the **real** `fhir.schema.json` end to end — see **Upcoming**
+below.
 
 ## Goal
 
@@ -43,7 +46,7 @@ Everything hangs off one core model; inputs and outputs are adapters around it.
 
 - **Schema** — the type shapes (today parsed ad-hoc in `JavaSource`).
 - **Mother** — named partial defaults for a schema type: fixed field values + a reference
-  to a parent mother (inheritance) + which mandatory fields are randomized. Defined
+  to a parent mother (inheritance) + fields explicitly randomized via `$random`. Defined
   **format-independently**: the same concept whether expressed in YAML, JSON, or Java.
   This is the declarative equivalent of `aFoodProduct()` building on `aProduct()`.
 - **Datasets** — *which* datasets the user wants. Not a single mother selection: a **list of
@@ -76,10 +79,10 @@ Everything hangs off one core model; inputs and outputs are adapters around it.
 
 1. ✅ Declarative mother → test data — `GenerateTestDataFromMotherTest`.
 2. ✅ Mother inheritance via `$extends` — `MotherInheritanceTest`.
-3. ↩️ ~~Mandatory fields randomized when not set~~ — **REVERSED (2026-06-25).** The generator must
-   only render the mother; filling mandatory fields is the **user's** responsibility (base mother +
-   `$extends`). Auto-fill is being removed in favour of an explicit `$random` directive — see
-   **Upcoming**.
+3. ↩️ ~~Mandatory fields randomized when not set~~ — **REVERSED & DONE (2026-06-25).** The generator
+   renders only the mother (no auto-fill); an unset field is omitted and `generate()` never throws —
+   completeness is the **user's** responsibility (base mother + `$extends`). Filling on demand is the
+   explicit `$random` directive — `GenerateRendersOnlySetValuesTest` + `RandomDirectiveTest`.
 4. ✅ Mother validation against schema — `ValidateMotherTest`.
 5. ✅ Data validation against schema — `ValidateTestDataTest`.
 6. ✅ Second format (YAML) over the same core — `DefineMotherInYamlTest`.
@@ -94,8 +97,7 @@ That is core-model work and comes before the delivery shell:
 9. ✅ **Flat datasets** — the wanted datasets are a list of mother invocations, each a mother
    reference plus scalar overrides, producing several datasets at once — `GenerateDatasetsTest`.
 10. ✅ **Nested objects in the schema** — a property may be an object with its own properties and
-    required fields; generation recurses, filling nested mandatory fields — `NestedObjectSchemaTest`.
-    (Arrays still open.)
+    required fields; generation recurses, rendering only what the mother sets — `NestedObjectSchemaTest`.
 11. ✅ **Nested mother invocations** — a field may reference another mother via `$mother`, resolved
     as a base with sibling overrides; the same machinery as a dataset invocation, one level deeper,
     so datasets compose as a tree — `ComposeMothersTest`.
@@ -117,16 +119,24 @@ existence checks). This brought, for free:
 
 Still planned, in order:
 
-1. ⬜ **Generation reworked: no auto-fill.** The generator only renders the mother's values; an
-   unset field is omitted (even if mandatory), and `generate()` does not throw — completeness is the
-   user's responsibility. Then add an explicit, user-invoked **`$random`** directive whose value
-   type comes from the schema (so `$random` on a `format: date` field yields a date). Rewrites
-   `RandomizeMandatoryFieldsTest` / `NestedObjectSchemaTest` to the new spec.
-2. ⬜ **Arrays** — schema, generation and validation support for `array` properties (not handled
-   anywhere yet).
-3. ⬜ **FHIR example** — a realistic end-to-end test driving a trimmed **FHIR Patient** subset
-   (id, gender, birthDate, nested name) through schema → mothers → generate → validate. FHIR's
-   official schema is JSON Schema Draft-06, heavy on `$ref` + `oneOf` (`value[x]`) + arrays; the
-   subset keeps it structural. Proves the validator and generation on a real-world schema.
+1. ✅ **Generation reworked: no auto-fill.** The generator only renders the mother's values; an unset
+   field is omitted (even if mandatory) and `generate()` does not throw — completeness is the user's
+   responsibility. The explicit, user-invoked **`$random`** directive (`{ "$random": {} }`) draws a
+   value of the property's schema type (string / integer / `format: date`), prefixing a plain string
+   with the field name (`street-7f3a9c`) for traceability and stripped from mother validation as a
+   directive. Reworked `NestedObjectSchemaTest`, replaced `RandomizeMandatoryFieldsTest` with
+   `GenerateRendersOnlySetValuesTest`, added `RandomDirectiveTest`. (Future: a `prefix` option on the
+   `$random` object for richer semantic-carrying values.)
+2. ✅ **Arrays** — schema, generation and validation support for `array` properties: an array of
+   scalars passes through, an array of objects renders each element by the same rules (so `$mother`
+   composition works inside an array), and the schema transforms recurse into `items` so an unknown
+   property inside an element is rejected — `ArraySchemaTest`.
+3. ⬜ **`$ref` / `definitions` resolution** — the generator currently reads inline `properties`, so a
+   schema whose types are factored into `#/definitions/...` and referenced via `$ref` (as the real
+   FHIR schema is) generates nothing. Resolve `$ref` during generation (validation already follows
+   refs via networknt) and across the schema transforms. This is the gate to the **real** FHIR schema.
+4. ⬜ **Real FHIR example** — once `$ref` resolves, drive the **real** `fhir.schema.json` (not a
+   hand-trimmed copy) end to end for a **Patient**: define a mother, generate, and validate against
+   the official schema. Decision (2026-06-26): use the real schema, reached via slices 2→3 above.
 
 ⬜ **Java export of a mother** (slice 7 above) remains open and independent of the list above.

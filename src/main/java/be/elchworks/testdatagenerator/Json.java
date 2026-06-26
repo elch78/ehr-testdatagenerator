@@ -18,7 +18,7 @@ public final class Json {
         try {
             return MAPPER.writeValueAsString(value);
         } catch (JacksonException e) {
-            throw new IllegalArgumentException("Cannot serialize to JSON: " + value, e);
+            throw new RuntimeException("Cannot serialize to JSON: " + value, e);
         }
     }
 }

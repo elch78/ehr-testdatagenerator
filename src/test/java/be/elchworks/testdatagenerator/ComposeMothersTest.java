@@ -1,25 +1,21 @@
 package be.elchworks.testdatagenerator;
 
 import be.elchworks.testdatagenerator.declarative.Schema;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
 
 /**
  * As a user I want a mother's field to reference another mother, so that I compose mothers and reuse
  * a nested one — the declarative equivalent of {@code aPerson().address(aBerlinAddress())}. The
- * referenced mother is fully resolved: its own unset mandatory fields are randomized, the same
- * {@code $mother} mechanism the {@link GenerateDatasetsTest datasets} use, one level deeper.
+ * referenced mother is resolved into the field — its set values appear, not a literal copy of the
+ * reference — the same {@code $mother} mechanism the {@link GenerateDatasetsTest datasets} use, one
+ * level deeper. Like everywhere else, a field the referenced mother leaves unset is simply omitted.
  */
 class ComposeMothersTest {
 
-    private final ObjectMapper json = new JsonMapper();
-
     @Test
-    void fieldReferencingAnotherMotherIsResolved() throws Exception {
+    void fieldReferencingAnotherMotherIsResolved() {
         // given a Person schema whose address is a nested object with mandatory street and city
         String schema = """
                 {
@@ -52,13 +48,12 @@ class ComposeMothersTest {
                 """);
 
         // when test data is generated
-        JsonNode data = json.readTree(person.mother("person").generate());
+        String data = person.mother("person").generate();
 
-        // then the referenced mother is resolved into the field, its set value kept
-        assertThat(data.get("name").asString()).isEqualTo("Alice");
-        assertThat(data.get("address").get("city").asString()).isEqualTo("Berlin");
-
-        // and its mandatory field left unset is randomized, proving full resolution not a literal copy
-        assertThat(data.get("address").get("street").asString()).isNotBlank();
+        // then the reference resolves into the field's values (an object, not a literal copy of the
+        // reference) and the field the referenced mother leaves unset is omitted
+        assertThatJson(data).isEqualTo("""
+                { "name": "Alice", "address": { "city": "Berlin" } }
+                """);
     }
 }
