@@ -200,3 +200,8 @@ core: build it as an **optional plugin/adapter** behind a small resolver interfa
 pre-expanded ValueSets as the default (cached local resources, pluggable to a live server such as
 `tx.fhir.org`) so the in-memory property is preserved when the plugin is absent. Own ATDD slice;
 depends on a plugin seam existing first.
+
+Detail research (regulatory context EHDS/eHDSI, the swappable resolver interface with a local-lookup
+vs. live-server backend, the MVC field→ValueSet binding table, server landscape) lives in the sibling
+**`knowledgebase`** repo under `knowledge/technology/health/` (`terminology-server.md`, `ehds.md`,
+`eehrxf.md`, `ehdsi-myhealth-eu.md`, `fhir-implementation-guide.md`).
