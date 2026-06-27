@@ -2,33 +2,33 @@
 # so the composed mother carries its own $type to say which one this entry is.
 
 # A minimal bundle: one patient and one observation.
-patientBundle:
+aPatientBundle:
   $type: Bundle
   resourceType: Bundle
   type: collection
   entry:
-    - resource: { $mother: femalePatient }
-    - resource: { $mother: bodyWeight }
+    - resource: { $mother: aFemalePatient }
+    - resource: { $mother: aBodyWeight }
 
 # A vital-signs panel: one patient and the four vital-sign observations.
-vitalsBundle:
+aVitalsBundle:
   $type: Bundle
   resourceType: Bundle
   type: collection
   entry:
-    - resource: { $mother: malePatient }
-    - resource: { $mother: bodyWeight }
-    - resource: { $mother: bodyHeight }
-    - resource: { $mother: bodyTemperature }
-    - resource: { $mother: bloodPressure }
+    - resource: { $mother: aMalePatient }
+    - resource: { $mother: aBodyWeight }
+    - resource: { $mother: aBodyHeight }
+    - resource: { $mother: aBodyTemperature }
+    - resource: { $mother: aBloodPressure }
 
 # An oncology case: a patient, a cancer diagnosis (Condition), a tumour-marker result and a weight.
-oncologyCase:
+anOncologyBundle:
   $type: Bundle
   resourceType: Bundle
   type: collection
   entry:
-    - resource: { $mother: femalePatient }
-    - resource: { $mother: breastCancer }
-    - resource: { $mother: tumourMarker }
-    - resource: { $mother: bodyWeight }
+    - resource: { $mother: aFemalePatient }
+    - resource: { $mother: aBreastCancerDiagnosis }
+    - resource: { $mother: aTumourMarker }
+    - resource: { $mother: aBodyWeight }

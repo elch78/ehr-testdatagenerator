@@ -1,12 +1,12 @@
 # Each entry assembles a Bundle. Reuse a bundle mother as-is, or puzzle a custom one together by
 # overriding `entry` with whichever resources the scenario needs.
-- { $mother: patientBundle }   # minimal: patient + body weight
-- { $mother: vitalsBundle }    # full vital-signs panel
-- { $mother: oncologyCase }    # cancer patient: diagnosis + tumour marker + weight
+- { $mother: aPatientBundle }   # minimal: patient + body weight
+- { $mother: aVitalsBundle }    # full vital-signs panel
+- { $mother: anOncologyBundle }    # cancer patient: diagnosis + tumour marker + weight
 
 # A one-off custom bundle, puzzled together inline: a male patient with just weight and temperature.
-- $mother: patientBundle
+- $mother: aPatientBundle
   entry:
-    - resource: { $mother: malePatient }
-    - resource: { $mother: bodyWeight }
-    - resource: { $mother: bodyTemperature }
+    - resource: { $mother: aMalePatient }
+    - resource: { $mother: aBodyWeight }
+    - resource: { $mother: aBodyTemperature }

@@ -1,10 +1,10 @@
 # Reusable HumanName mothers. Composed into Patient.name via { $mother: ... }.
-janeDoe:
+aFemaleName:
   use: official
   family: Doe
   given: [Jane]
 
-johnSmith:
+aMaleName:
   use: official
   family: Smith
   given: [John, Michael]

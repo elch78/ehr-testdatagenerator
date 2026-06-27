@@ -2,7 +2,7 @@
 # Reference, and a result. They differ in how the result is shaped, to show more of the schema:
 #   - valueQuantity: a nested Quantity (value + unit)
 #   - component:     an array of nested component observations, each with its own Quantity
-bodyWeight:
+aBodyWeight:
   $type: Observation
   resourceType: Observation
   id: { $random: {} }
@@ -17,7 +17,7 @@ bodyWeight:
     value: 72
     unit: kg
 
-bodyHeight:
+aBodyHeight:
   $type: Observation
   resourceType: Observation
   id: { $random: {} }
@@ -32,7 +32,7 @@ bodyHeight:
     value: 178
     unit: cm
 
-bodyTemperature:
+aBodyTemperature:
   $type: Observation
   resourceType: Observation
   id: { $random: {} }
@@ -48,7 +48,7 @@ bodyTemperature:
     unit: Cel
 
 # A blood pressure is one Observation with two component measurements.
-bloodPressure:
+aBloodPressure:
   $type: Observation
   resourceType: Observation
   id: { $random: {} }
@@ -66,7 +66,7 @@ bloodPressure:
       valueQuantity: { value: 80, unit: mmHg }
 
 # A tumour marker result, used in the oncology bundle alongside the cancer Condition.
-tumourMarker:
+aTumourMarker:
   $type: Observation
   resourceType: Observation
   id: { $random: {} }

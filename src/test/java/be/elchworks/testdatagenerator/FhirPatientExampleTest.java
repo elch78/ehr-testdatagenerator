@@ -25,7 +25,7 @@ class FhirPatientExampleTest {
         Schema fhir = Schema.parse(FHIR_SCHEMA);
 
         // $type names the resource to build; it travels in the JSON, like $mother / $random / $ref
-        fhir.define("patient", """
+        fhir.define("aFemalePatient", """
                 {
                   "$type": "Patient",
                   "resourceType": "Patient",
@@ -36,7 +36,7 @@ class FhirPatientExampleTest {
                 """);
 
         // when the Patient is generated
-        String patient = fhir.mother("patient").generate();
+        String patient = fhir.mother("aFemalePatient").generate();
 
         // then exactly those fields are rendered; $type is a directive, stripped from the output
         assertThatJson(patient).isEqualTo("""

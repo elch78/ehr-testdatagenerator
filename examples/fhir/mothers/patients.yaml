@@ -4,23 +4,23 @@
 #   id         $random -> a fresh, schema-valid FHIR id per generated instance
 #   name       an array whose element is composed from a HumanName mother ($mother in an array element)
 #   address    an array element composed from an Address mother (which itself is a nested object)
-patient:
+aPatient:
   $type: Patient
   resourceType: Patient
   id: { $random: {} }
   active: true
   name:
-    - { $mother: janeDoe }
+    - { $mother: aFemaleName }
   address:
-    - { $mother: berlinHome }
+    - { $mother: aHomeAddress }
 
-# Inherit everything from `patient`, state only what differs.
-femalePatient:
-  $extends: patient
+# Inherit everything from `aPatient`, state only what differs.
+aFemalePatient:
+  $extends: aPatient
   gender: female
 
-malePatient:
-  $extends: patient
+aMalePatient:
+  $extends: aPatient
   gender: male
   name:
-    - { $mother: johnSmith }
+    - { $mother: aMaleName }

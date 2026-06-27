@@ -1,14 +1,14 @@
 # Reference a mother and change individual properties — the core way to make scenarios.
 # `id` comes from $random, so every patient gets its own distinct, schema-valid id.
-- { $mother: femalePatient }                          # baseline, the mother as defined
-- { $mother: femalePatient, birthDate: "1985-07-12" } # override a scalar: add a birth date
-- { $mother: malePatient, active: false }             # override a scalar: a non-active record
+- { $mother: aFemalePatient }                          # baseline, the mother as defined
+- { $mother: aFemalePatient, birthDate: "1985-07-12" } # override a scalar: add a birth date
+- { $mother: aMalePatient, active: false }             # override a scalar: a non-active record
 
 # Overriding works at any depth: an array element can itself be "a mother plus overrides".
-# Here we reuse the janeDoe name mother but change just the family name, and reuse the berlinHome
+# Here we reuse the aFemaleName name mother but change just the family name, and reuse the aHomeAddress
 # address mother but change just the city — without restating the rest of those objects.
-- $mother: femalePatient
+- $mother: aFemalePatient
   name:
-    - { $mother: janeDoe, family: Müller }
+    - { $mother: aFemaleName, family: Müller }
   address:
-    - { $mother: berlinHome, city: München }
+    - { $mother: aHomeAddress, city: München }

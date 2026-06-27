@@ -1,6 +1,6 @@
 # A Condition mother: a cancer diagnosis. Shows more nested CodeableConcepts (clinicalStatus,
 # severity, bodySite) and a `stage`, all about a patient via `subject`.
-breastCancer:
+aBreastCancerDiagnosis:
   $type: Condition
   resourceType: Condition
   id: { $random: {} }

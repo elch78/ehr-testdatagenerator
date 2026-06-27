@@ -1,16 +1,16 @@
 # Adjusting a mother at invocation time. An override REPLACES a whole field (no deep merge),
 # so the ease depends on the field's shape:
-- { $mother: bodyWeight }                                    # the mother as defined: 72 kg, final
+- { $mother: aBodyWeight }                                    # the mother as defined: 72 kg, final
 
 # scalar override — trivial:
-- { $mother: bodyWeight, status: preliminary }
+- { $mother: aBodyWeight, status: preliminary }
 
 # single nested object override — replace the whole Quantity:
-- { $mother: bodyWeight, valueQuantity: { value: 80, unit: kg } }
+- { $mother: aBodyWeight, valueQuantity: { value: 80, unit: kg } }
 
 # array override — there is no "append": to add a category you restate the whole list.
 # This is why arrays are best handled by composing small sub-mothers rather than deep editing.
-- $mother: bodyWeight
+- $mother: aBodyWeight
   category:
     - { text: Vital Signs }
     - { text: Survey }

@@ -26,7 +26,7 @@ class FhirBundleExampleTest {
     void composeAndValidateABundleOfReferencingResources() {
         Schema fhir = Schema.parse(FHIR_SCHEMA);
 
-        fhir.define("patient", """
+        fhir.define("aFemalePatient", """
                 {
                   "$type": "Patient",
                   "resourceType": "Patient",
@@ -37,7 +37,7 @@ class FhirBundleExampleTest {
                 }
                 """);
 
-        fhir.define("bodyWeight", """
+        fhir.define("aBodyWeight", """
                 {
                   "$type": "Observation",
                   "resourceType": "Observation",
@@ -48,20 +48,20 @@ class FhirBundleExampleTest {
                 """);
 
         // the Bundle composes the two resource mothers, one per entry
-        fhir.define("bundle", """
+        fhir.define("aPatientBundle", """
                 {
                   "$type": "Bundle",
                   "resourceType": "Bundle",
                   "type": "collection",
                   "entry": [
-                    { "resource": { "$mother": "patient" } },
-                    { "resource": { "$mother": "bodyWeight" } }
+                    { "resource": { "$mother": "aFemalePatient" } },
+                    { "resource": { "$mother": "aBodyWeight" } }
                   ]
                 }
                 """);
 
         // when the Bundle is generated
-        String bundle = fhir.mother("bundle").generate();
+        String bundle = fhir.mother("aPatientBundle").generate();
 
         // then each entry holds the fully resolved resource; $type / $mother are directives, never rendered
         assertThatJson(bundle).isEqualTo("""

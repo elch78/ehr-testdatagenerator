@@ -1,5 +1,5 @@
 # Reusable Address mother. Composed into Patient.address via { $mother: ... }.
-berlinHome:
+aHomeAddress:
   use: home
   line: [Unter den Linden 1]
   city: Berlin
